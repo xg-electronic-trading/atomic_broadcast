@@ -1,0 +1,11 @@
+# intellij
+.idea/
+*.iml
+
+# the build
+.gradle/
+build*
+
+# JVM crash reports
+hs_err_pid*
+*.hprof
