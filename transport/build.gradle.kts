@@ -22,6 +22,9 @@ dependencies {
 
     // This dependency is used by the application.
     implementation("com.google.guava:guava:30.1.1-jre")
+    implementation("io.aeron:aeron-all:1.39.0")
+    implementation("uk.co.real-logic:sbe-all:1.26.0")
+    implementation("org.agrona:agrona:1.16.0")
 }
 
 application {
