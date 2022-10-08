@@ -3,12 +3,20 @@
  */
 package atomic_broadcast;
 
+import atomic_broadcast.utils.CompositeModule;
+
 public class App {
     public String getGreeting() {
         return "Hello World!";
     }
 
     public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+        CompositeModule modules = new CompositeModule();
+
+        modules.add(new AeronModule(true, true, false));
+
+        modules.start();
+
+        modules.close();
     }
 }

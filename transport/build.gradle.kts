@@ -19,6 +19,7 @@ repositories {
 dependencies {
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
+    testImplementation(project(":transport"))
 
     // This dependency is used by the application.
     implementation("com.google.guava:guava:30.1.1-jre")

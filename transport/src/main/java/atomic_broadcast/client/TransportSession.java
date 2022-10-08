@@ -5,4 +5,6 @@ public interface TransportSession {
     boolean isSubscriptionConnected();
 
     boolean isPublicationConnected();
+
+    boolean poll();
 }

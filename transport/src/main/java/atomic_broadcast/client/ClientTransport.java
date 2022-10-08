@@ -23,6 +23,11 @@ public class ClientTransport implements TransportSession, Agent {
     }
 
     @Override
+    public boolean poll() {
+        return false;
+    }
+
+    @Override
     public int doWork() throws Exception {
         return 0;
     }
