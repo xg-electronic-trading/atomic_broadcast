@@ -1,13 +1,13 @@
 package atomic_broadcast;
 
+import atomic_broadcast.utils.RecordingDescriptor;
+import atomic_broadcast.utils.RecordingDescriptorConsumerImpl;
 import atomic_broadcast.utils.RecordingSignalConsumerImpl;
 import io.aeron.*;
 import io.aeron.archive.Archive;
 import io.aeron.archive.ArchiveThreadingMode;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.archive.client.AeronArchive;
-import io.aeron.archive.client.RecordingDescriptorConsumer;
-import io.aeron.archive.client.RecordingSignalConsumer;
 import io.aeron.archive.client.ReplayMerge;
 import io.aeron.archive.codecs.RecordingSignal;
 import io.aeron.archive.status.RecordingPos;
@@ -21,22 +21,20 @@ import org.agrona.concurrent.status.CountersReader;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 import static io.aeron.Aeron.NULL_VALUE;
 import static io.aeron.archive.client.RecordingSignalPoller.FRAGMENT_LIMIT;
-import static io.aeron.archive.codecs.SourceLocation.REMOTE;
+import static io.aeron.archive.codecs.SourceLocation.LOCAL;
 
-public class ReplicatedRecordingTest {
+public class ReplayMergeFromReplicatedArchiveTest {
 
 
     private static final int STREAM_ID = 1033;
 
     private static final String CONTROL_ENDPOINT = "localhost:23265";
-    private static final String RECORDING_ENDPOINT = "localhost:23266";
     private static final String LIVE_ENDPOINT = "localhost:23267";
+    private static final String LIVE_ENDPOINT_2 = "localhost:23268";
     private static final String REPLAY_ENDPOINT = "localhost:0";
 
     public static final String REPLICATION_CHANNEL = "aeron:udp?endpoint=localhost:0";
@@ -46,19 +44,22 @@ public class ReplicatedRecordingTest {
 
     private static final int PUBLICATION_TAG = 2;
 
+    /**
+     * Note: controlEndpoint and controlMode set when running tests locally. This ensures
+     * tests pub-sub using MDC when multicast is not available.
+     */
+
     private final String publicationChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
             .tags("1," + PUBLICATION_TAG)
-            .controlEndpoint(CONTROL_ENDPOINT)
+            .controlEndpoint(CONTROL_ENDPOINT) //change this to endpoint and remove control mode when using multicast
             .controlMode(CommonContext.MDC_CONTROL_MODE_DYNAMIC)
-            //.termLength(TERM_LENGTH)
-            //.taggedFlowControl(GROUP_TAG, 1, "5s")
             .build();
 
     private final String liveDestination = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
+            .controlEndpoint(CONTROL_ENDPOINT) // remove control endpoint when using multicast
             .endpoint(LIVE_ENDPOINT)
-            .controlEndpoint(CONTROL_ENDPOINT)
             .build();
 
     private final String replayDestination = new ChannelUriStringBuilder()
@@ -174,17 +175,9 @@ public class ReplicatedRecordingTest {
 
 
     @Test
-    public void replayMergeFromReplicatedRecording() {
+    public void replayMerge() {
         Publication pub = aeron.addPublication(publicationChannel, STREAM_ID);
-
-        final String recordingChannel = new ChannelUriStringBuilder()
-                .media(CommonContext.UDP_MEDIA)
-                .endpoint(RECORDING_ENDPOINT)
-                .controlEndpoint(CONTROL_ENDPOINT)
-                .sessionId(pub.sessionId())
-                //.groupTag(GROUP_TAG)
-                .build();
-
+        System.out.println("publication session-id: " + pub.sessionId());
 
         final String subscriptionChannel = new ChannelUriStringBuilder()
                 .media(CommonContext.UDP_MEDIA)
@@ -192,7 +185,7 @@ public class ReplicatedRecordingTest {
                 .sessionId(pub.sessionId())
                 .build();
 
-        aeronArchive.startRecording(recordingChannel, STREAM_ID, REMOTE, true);
+        aeronArchive.startRecording(publicationChannel, STREAM_ID, LOCAL, true);
         final CountersReader counters = aeron.countersReader();
         final int recordingCounterId = awaitRecordingCounterId(counters, pub.sessionId());
         final long recordingId = RecordingPos.getRecordingId(counters, recordingCounterId);
@@ -204,7 +197,80 @@ public class ReplicatedRecordingTest {
             pub.offer(buffer, 0, Long.BYTES);
         }
 
-         replayMerge(recordingId, subscriptionChannel);
+         replayMerge(
+                 recordingId,
+                 subscriptionChannel,
+                 replayChannel,
+                 replayDestination,
+                 liveDestination,
+                 aeronArchive
+                 );
+    }
+
+    @Test
+    public void replayMergeFromReplicateRecording() {
+        Publication pub = aeron.addPublication(publicationChannel, STREAM_ID);
+        System.out.println("publication session-id: " + pub.sessionId());
+
+        aeronArchive.startRecording(publicationChannel, STREAM_ID, LOCAL, true);
+        final CountersReader counters = aeron.countersReader();
+        final int recordingCounterId = awaitRecordingCounterId(counters, pub.sessionId());
+        final long recordingId = RecordingPos.getRecordingId(counters, recordingCounterId);
+        pollForSignals(aeronArchive, recordingSignalConsumer, RecordingSignal.START);
+
+        int messagesToPublish = 5;
+        for (int i = 0; i < messagesToPublish; i++) {
+            buffer.putLong(0, i);
+            pub.offer(buffer, 0, Long.BYTES);
+        }
+
+        dstAeronArchive.replicate(
+                recordingId,
+                NULL_VALUE,
+                AeronArchive.Configuration.CONTROL_STREAM_ID_DEFAULT,
+                CONTROL_REQUEST_CHANNEL,
+                publicationChannel);
+
+        pollForSignals(dstAeronArchive, dstRecordingSignalConsumer, RecordingSignal.REPLICATE);
+        pollForSignals(dstAeronArchive, dstRecordingSignalConsumer, RecordingSignal.EXTEND);
+        pollForSignals(dstAeronArchive, dstRecordingSignalConsumer, RecordingSignal.MERGE);
+
+        RecordingDescriptorConsumerImpl descriptorConsumer = new RecordingDescriptorConsumerImpl();
+        aeronArchive.listRecordings(0, Integer.MAX_VALUE, descriptorConsumer);
+
+        RecordingDescriptor srcRecording = descriptorConsumer.getRecordingDescriptors().get(0);
+        System.out.println("src archive recording: " + srcRecording);
+
+        RecordingDescriptorConsumerImpl dstDescriptorConsumer = new RecordingDescriptorConsumerImpl();
+        dstAeronArchive.listRecordings(0, Integer.MAX_VALUE, dstDescriptorConsumer);
+        RecordingDescriptor dstRecording = dstDescriptorConsumer.getRecordingDescriptors().get(0);
+        System.out.println("dst archive recording: " + dstRecording);
+
+        final String subscriptionChannel = new ChannelUriStringBuilder()
+                .media(CommonContext.UDP_MEDIA)
+                .controlMode(CommonContext.MDC_CONTROL_MODE_MANUAL)
+                .sessionId(dstRecording.sessionId()) // session-id of dst-recording and src-recording should match pub session-id
+                .build();
+
+        String replayChannel = new ChannelUriStringBuilder()
+                .media(CommonContext.UDP_MEDIA)
+                .sessionId(dstRecording.sessionId()) // session-id of dst-recording and src-recording should match pub session-id
+                .build();
+
+        String liveDestination = new ChannelUriStringBuilder()
+                .media(CommonContext.UDP_MEDIA)
+                .controlEndpoint(CONTROL_ENDPOINT)
+                .endpoint(LIVE_ENDPOINT_2)
+                .build();
+
+        replayMerge(
+                dstRecording.recordingId(),
+                subscriptionChannel,
+                replayChannel,
+                replayDestination,
+                liveDestination,
+                dstAeronArchive);
+
     }
 
     private void pollForSignals(AeronArchive aeronArchive, RecordingSignalConsumerImpl recordingSignalConsumer, RecordingSignal expectedSignal) {
@@ -218,7 +284,12 @@ public class ReplicatedRecordingTest {
         }
     }
 
-    private void replayMerge(long recordingId, String subscriptionChannel) {
+    private void replayMerge(long recordingId,
+                             String subscriptionChannel,
+                             String replayChannel,
+                             String replayDestination,
+                             String liveDestination,
+                             AeronArchive aeronArchive) {
         Subscription subscription = aeron.addSubscription(subscriptionChannel, STREAM_ID);
 
         ReplayMerge replayMerge = new ReplayMerge(
