@@ -4,6 +4,7 @@ import atomic_broadcast.client.TransportSession;
 import atomic_broadcast.utils.SequencerTransportState;
 import atomic_broadcast.utils.TransportParams;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.UnsafeBuffer;
 
 import static atomic_broadcast.utils.SequencerTransportState.NO_STATE;
 
@@ -28,7 +29,22 @@ public class SequencerTransport implements TransportSession, Agent {
     }
 
     @Override
-    public boolean poll() {
+    public void start() {
+
+    }
+
+    @Override
+    public void stop() {
+
+    }
+
+    @Override
+    public boolean pollSubscription() {
+        return false;
+    }
+
+    @Override
+    public boolean publish(UnsafeBuffer buffer, int offset, int length) {
         return false;
     }
 

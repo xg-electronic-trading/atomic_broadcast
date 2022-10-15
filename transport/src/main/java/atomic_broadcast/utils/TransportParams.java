@@ -1,9 +1,15 @@
 package atomic_broadcast.utils;
 
+import atomic_broadcast.listener.MessageListener;
+
+import java.util.ArrayList;
+import java.util.List;
+
 public class TransportParams {
 
-    private ConnectAs connectAs;
-    private ConnectUsing connectUsing;
+    private ConnectAs connectAs = ConnectAs.Client;
+    private ConnectUsing connectUsing = ConnectUsing.Ipc;
+    private final ArrayList<MessageListener> listeners = new ArrayList<>(10);
 
     public TransportParams connectAs(ConnectAs connectAs) {
         this.connectAs = connectAs;
@@ -15,6 +21,11 @@ public class TransportParams {
         return this;
     }
 
+    public TransportParams addListener(MessageListener listener) {
+        listeners.add(listener);
+        return this;
+    }
+
 
     public ConnectAs connectAs() {
         return connectAs;
@@ -23,4 +34,6 @@ public class TransportParams {
     public ConnectUsing connectUsing() {
         return connectUsing;
     }
+
+    public List<MessageListener> listeners() { return listeners; }
 }

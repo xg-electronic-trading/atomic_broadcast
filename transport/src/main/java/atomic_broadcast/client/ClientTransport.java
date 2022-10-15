@@ -3,6 +3,7 @@ package atomic_broadcast.client;
 
 import atomic_broadcast.utils.TransportParams;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.UnsafeBuffer;
 
 public class ClientTransport implements TransportSession, Agent {
 
@@ -23,7 +24,22 @@ public class ClientTransport implements TransportSession, Agent {
     }
 
     @Override
-    public boolean poll() {
+    public void start() {
+
+    }
+
+    @Override
+    public void stop() {
+
+    }
+
+    @Override
+    public boolean pollSubscription() {
+        return false;
+    }
+
+    @Override
+    public boolean publish(UnsafeBuffer buffer, int offset, int length) {
         return false;
     }
 

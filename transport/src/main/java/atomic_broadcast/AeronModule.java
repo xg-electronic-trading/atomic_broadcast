@@ -17,8 +17,8 @@ public class AeronModule implements Module {
     public static final String REPLICATION_CHANNEL = "aeron:udp?endpoint=localhost:0";
     public static final String CONTROL_REQUEST_CHANNEL = "aeron:udp?endpoint=localhost:8010";
     public static final String CONTROL_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:0";
-    private static final String AERON_DIR_NAME = "/Users/fa/sandbox/aeron";
-    private static final String AERON_ARCHIVE_DIR_NAME = "/Users/fa/sandbox/aeron-archive";
+    private static final String AERON_DIR_NAME = "/Users/fa/sandbox/shm/aeron";
+    private static final String AERON_ARCHIVE_DIR_NAME = "/Users/fa/sandbox/shm/aeron-archive";
 
     private final boolean startMediaDriverInProcess;
     private final boolean connectToMediaDriver;

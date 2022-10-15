@@ -9,3 +9,4 @@
 
 rootProject.name = "atomic_broadcast"
 include("transport")
+include("algo-container")

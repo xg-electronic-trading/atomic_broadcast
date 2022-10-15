@@ -24,20 +24,26 @@ public class AeronTransportModule implements Module {
         switch (params.connectAs()) {
             case Client:
                 transport = new ClientTransport(params);
+                break;
+
             case Sequencer:
                 transport = new SequencerTransport(params);
+                break;
+
             default:
                 throw new IllegalArgumentException("error: trying to connect as: " + params.connectAs());
         }
+
+        transport.start();
     }
 
     @Override
     public void close() {
-
+        transport.stop();
     }
 
     @Override
     public void poll() {
-
+        transport.pollSubscription();
     }
 }

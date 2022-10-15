@@ -30,7 +30,7 @@ dependencies {
 
 application {
     // Define the main class for the application.
-    mainClass.set("atomic_broadcast.App")
+    //mainClass.set("atomic_broadcast.App")
 }
 
 tasks.named<Test>("test") {
