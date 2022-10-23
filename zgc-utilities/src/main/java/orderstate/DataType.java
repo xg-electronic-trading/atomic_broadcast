@@ -1,4 +1,4 @@
-package utils;
+package orderstate;
 
 public enum DataType {
     ShortType,

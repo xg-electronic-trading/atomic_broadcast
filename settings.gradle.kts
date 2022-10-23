@@ -10,3 +10,22 @@
 rootProject.name = "atomic_broadcast"
 include("transport")
 include("algo-container")
+include("performance-benchmarks")
+include("zgc-utilities")
+
+
+dependencyResolutionManagement {
+    versionCatalogs {
+        create("libs") {
+            library("aeron-all", "io.aeron", "aeron-all").version("1.39.0")
+            library("sbe-all", "uk.co.real-logic", "sbe-all").version("1.26.0")
+            library("agrona", "org.agrona", "agrona").version("1.16.0")
+            library("gflog-api", "com.epam.deltix", "gflog-api").version("3.0.2")
+            library("gflog-core", "com.epam.deltix", "gflog-core").version("3.0.2")
+            bundle("real-logic", listOf("aeron-all", "sbe-all", "agrona"))
+        }
+    }
+}
+
+
+

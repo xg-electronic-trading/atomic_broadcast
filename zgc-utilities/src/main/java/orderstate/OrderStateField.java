@@ -1,7 +1,7 @@
-package utils;
+package orderstate;
 
-import static utils.DataType.IntType;
-import static utils.DataType.LongType;
+import static orderstate.DataType.IntType;
+import static orderstate.DataType.LongType;
 
 public enum OrderStateField {
 

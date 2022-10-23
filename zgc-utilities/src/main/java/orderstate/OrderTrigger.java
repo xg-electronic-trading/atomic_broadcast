@@ -1,4 +1,4 @@
-package container;
+package orderstate;
 
 public interface OrderTrigger {
 

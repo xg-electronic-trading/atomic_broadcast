@@ -1,9 +1,6 @@
-package container;
+package orderstate;
 
-import utils.AbstractPooledObject;
-import utils.OrderStateField;
-
-public class MutableOrderState extends AbstractPooledObject implements OrderState, OrderTrigger {
+public class MutableOrderState extends AbstractPooledObject implements OrderState {
 
     private boolean shouldTrigger;
     public long orderId;
@@ -38,11 +35,6 @@ public class MutableOrderState extends AbstractPooledObject implements OrderStat
     @Override
     public long msgSeqNum() {
         return msgSeqNum;
-    }
-
-    @Override
-    public void markOrderToRun() {
-        this.shouldTrigger = true;
     }
 
     public long getLong(OrderStateField field) {
