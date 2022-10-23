@@ -30,7 +30,7 @@ public class OrderStateCache implements StateCache {
 
     private final ObjectPool<MutableOrderState> pool;
 
-    private final Map<Long, Long> id2Index = new Long2LongHashMap(10_000, 0.55f, -1, true);
+    private final Long2LongHashMap id2Index = new Long2LongHashMap(10_000, 0.55f, -1, true);
 
     private final OrderStateFlyweight flyweight;
     private final OrderStateField[] fields;
@@ -84,6 +84,9 @@ public class OrderStateCache implements StateCache {
             }
             fieldOffset += field.getSize();
         }
+
+        state.destruct();
+        flyweight.setObjectOffset(0); //reset offset to beginning
     }
 
     @Override

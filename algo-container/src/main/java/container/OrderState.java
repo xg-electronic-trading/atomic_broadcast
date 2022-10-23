@@ -6,4 +6,10 @@ public interface OrderState {
 
     boolean shouldTrigger();
 
+    long quantity();
+
+    long price();
+
+    long msgSeqNum();
+
 }

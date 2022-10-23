@@ -17,12 +17,27 @@ public class MutableOrderState extends AbstractPooledObject implements OrderStat
 
     @Override
     public long orderId() {
-        return 0;
+        return orderId;
     }
 
     @Override
     public boolean shouldTrigger() {
         return false;
+    }
+
+    @Override
+    public long quantity() {
+        return quantity;
+    }
+
+    @Override
+    public long price() {
+        return price;
+    }
+
+    @Override
+    public long msgSeqNum() {
+        return msgSeqNum;
     }
 
     @Override
