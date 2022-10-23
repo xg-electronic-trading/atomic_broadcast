@@ -10,7 +10,7 @@
 rootProject.name = "atomic_broadcast"
 include("transport")
 include("algo-container")
-include("performance-benchmarks")
+include("perf-benchmarks")
 include("zgc-utilities")
 
 
@@ -26,6 +26,4 @@ dependencyResolutionManagement {
         }
     }
 }
-
-
-
+include("perf-benchmarks")
