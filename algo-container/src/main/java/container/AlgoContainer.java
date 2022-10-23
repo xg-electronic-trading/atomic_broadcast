@@ -1,13 +1,16 @@
 package container;
 
 import subscriptions.MarketDataPoller;
+import utils.OrderStateCache;
 
 public class AlgoContainer implements Container {
 
     private final MarketDataPoller marketData;
+    private final OrderStateCache osCache;
 
-    public AlgoContainer(MarketDataPoller marketData) {
+    public AlgoContainer(MarketDataPoller marketData, OrderStateCache osCache) {
         this.marketData = marketData;
+        this.osCache = osCache;
     }
 
 
@@ -29,5 +32,6 @@ public class AlgoContainer implements Container {
         // 2. poll clock service
 
         // 3. trigger algos
+
     }
 }
