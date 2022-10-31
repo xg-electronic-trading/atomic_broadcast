@@ -22,11 +22,10 @@ dependencyResolutionManagement {
             library("agrona", "org.agrona", "agrona").version("1.16.0")
             library("gflog-api", "com.epam.deltix", "gflog-api").version("3.0.2")
             library("gflog-core", "com.epam.deltix", "gflog-core").version("3.0.2")
-            library("jmh-core", "org.open.jdk.jmh", "jmh-core").version("1.35")
-            library("jmh-generator-annprocess", "org.open.jdk.jmh", "jmh-generator-annprocess").version("1.35")
+            library("jmh-core", "org.openjdk.jmh", "jmh-core").version("1.35")
+            library("jmh-generator-annprocess", "org.openjdk.jmh", "jmh-generator-annprocess").version("1.35")
             bundle("real-logic", listOf("aeron-all", "sbe-all", "agrona"))
             bundle("jmh", listOf("jmh-core", "jmh-generator-annprocess"))
         }
     }
 }
-include("perf-benchmarks")

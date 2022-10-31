@@ -7,25 +7,9 @@ public interface StateCache {
      * an object pool which is populated from off heap buffer using a flyweight
      */
 
-    MutableOrderState orderState(long id);
+    OrderState orderState(long id);
 
-    /**
-     * commit entire state object to off heap buffer
-     * and return object to pool
-     */
-    void commitState(MutableOrderState state);
-
-    void commitField(long id, OrderStateField field, short value);
-
-    void commitField(long id, OrderStateField field, int value);
-
-    void commitField(long id, OrderStateField field, long value);
-
-    void commitField(long id, OrderStateField field, boolean value);
-
-    void commitField(long id, OrderStateField field, byte value);
-
-    void commitField(long id, OrderStateField field, CharSequence value);
+    int maxOrders();
 
     void close();
 }

@@ -2,7 +2,6 @@ package orderstate;
 
 public class MutableOrderState extends AbstractPooledObject implements OrderState {
 
-    private boolean shouldTrigger;
     public long orderId;
     public long price;
     public long quantity;
@@ -15,11 +14,6 @@ public class MutableOrderState extends AbstractPooledObject implements OrderStat
     @Override
     public long orderId() {
         return orderId;
-    }
-
-    @Override
-    public boolean shouldTrigger() {
-        return false;
     }
 
     @Override
@@ -87,7 +81,6 @@ public class MutableOrderState extends AbstractPooledObject implements OrderStat
 
     @Override
     public void reset() {
-        shouldTrigger = false;
         price = -1;
         quantity = -1;
         orderId = -1;

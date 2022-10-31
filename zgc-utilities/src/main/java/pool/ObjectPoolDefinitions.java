@@ -9,5 +9,5 @@ public class ObjectPoolDefinitions {
      * however we have given the pool a size of 10 to cater for extra objects being checked out when
      * traversing a order hierarchy
      */
-    public final ObjectPool<MutableOrderState> orderStateObjectPool = new ObjectPool<>(10, MutableOrderState::new);
+    public final ObjectPool<MutableOrderState> orderStateObjectPool = new ObjectPool<>(5_000_000, MutableOrderState::new);
 }

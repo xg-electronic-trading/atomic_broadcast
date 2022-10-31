@@ -1,14 +1,14 @@
 package container;
 
-import orderstate.OrderStateCache;
+import orderstate.ByteBufferOrderStateCache;
 import subscriptions.MarketDataPoller;
 
 public class AlgoContainer implements Container {
 
     private final MarketDataPoller marketData;
-    private final OrderStateCache osCache;
+    private final ByteBufferOrderStateCache osCache;
 
-    public AlgoContainer(MarketDataPoller marketData, OrderStateCache osCache) {
+    public AlgoContainer(MarketDataPoller marketData, ByteBufferOrderStateCache osCache) {
         this.marketData = marketData;
         this.osCache = osCache;
     }

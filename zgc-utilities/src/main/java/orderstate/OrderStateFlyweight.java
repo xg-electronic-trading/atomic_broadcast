@@ -7,7 +7,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 
 import java.nio.ByteBuffer;
 
-public class OrderStateFlyweight {
+public class OrderStateFlyweight implements OrderState {
 
     Log log = LogFactory.getLog(this.getClass().getName());
 
@@ -15,6 +15,12 @@ public class OrderStateFlyweight {
     private final OrderStateField[] fields;
     private int objectSize = 0;
     private int objectOffset = 0;
+    private int maxOrders;
+
+    private int idOffset = -1;
+    private int priceOffset = -1;
+    private int quantityOffset = -1;
+    private int msgSeqNumOffset = -1;
 
     public OrderStateFlyweight(boolean offHeap, int cacheSizeBytes, OrderStateField[] fields) {
         this.buffer = offHeap ? new UnsafeBuffer(ByteBuffer.allocateDirect(cacheSizeBytes)) : new UnsafeBuffer(ByteBuffer.allocate(cacheSizeBytes));
@@ -22,19 +28,56 @@ public class OrderStateFlyweight {
 
         for (int i = 0; i < fields.length; i++) {
             OrderStateField field = fields[i];
+            switch (field) {
+                case Id:
+                    idOffset = objectSize;
+                    break;
+                case Price:
+                    priceOffset = objectSize;
+                    break;
+                case Quantity:
+                    quantityOffset = objectSize;
+                    break;
+                case MsgSeqNum:
+                    msgSeqNumOffset = objectOffset;
+                default:
+                    throw new IllegalArgumentException("field " + field + " not recognised and unable to be added to orderstate cache.");
+
+
+
+            }
             objectSize += field.getSize();
         }
+
+        maxOrders = cacheSizeBytes/objectSize;
 
         log.info().append("orderstate cache instantiated with cache size (bytes): ")
                 .append(cacheSizeBytes)
                 .append(", object size: ")
                 .append(objectSize)
                 .append(", order capacity: ")
-                .appendLast(cacheSizeBytes/objectSize);
+                .appendLast(maxOrders);
+
     }
 
     public void setObjectOffset(int index) {
         objectOffset = index * objectSize;
+    }
+
+    public void setOrderId(long id) {
+        set(id, idOffset);
+    }
+
+    public void setPrice(long price) {
+        set(price, priceOffset);
+    }
+
+    public void setQuantity(long quantity) {
+        set(quantity, quantityOffset);
+    }
+
+    public void setMsgSeqNum(long msgSeqNum) {
+        set(msgSeqNum, msgSeqNumOffset);
     }
 
     public void set(long value, int fieldOffset) {
@@ -66,5 +109,28 @@ public class OrderStateFlyweight {
         BufferUtil.free(buffer);
     }
 
+    public int maxOrders() {
+        return maxOrders;
+    }
 
+
+    @Override
+    public long orderId() {
+        return getLong(idOffset);
+    }
+
+    @Override
+    public long quantity() {
+        return getLong(quantityOffset);
+    }
+
+    @Override
+    public long price() {
+        return getLong(priceOffset);
+    }
+
+    @Override
+    public long msgSeqNum() {
+        return getLong(msgSeqNumOffset);
+    }
 }
