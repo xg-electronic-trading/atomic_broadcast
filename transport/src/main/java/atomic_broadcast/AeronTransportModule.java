@@ -44,6 +44,6 @@ public class AeronTransportModule implements Module {
 
     @Override
     public void poll() {
-        transport.pollSubscription();
+        transport.poll();
     }
 }

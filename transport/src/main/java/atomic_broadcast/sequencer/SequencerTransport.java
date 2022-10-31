@@ -39,7 +39,7 @@ public class SequencerTransport implements TransportSession, Agent {
     }
 
     @Override
-    public boolean pollSubscription() {
+    public boolean poll() {
         return false;
     }
 

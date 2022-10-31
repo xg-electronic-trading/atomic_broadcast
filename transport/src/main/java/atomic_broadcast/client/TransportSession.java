@@ -12,7 +12,7 @@ public interface TransportSession {
 
     void stop();
 
-    boolean pollSubscription();
+    boolean poll();
 
     boolean publish(UnsafeBuffer buffer, int offset, int length);
 }
