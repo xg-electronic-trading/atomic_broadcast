@@ -1,4 +1,4 @@
-package atomic_broadcast.utils;
+package atomic_broadcast.aeron;
 
 import io.aeron.archive.client.RecordingDescriptorConsumer;
 

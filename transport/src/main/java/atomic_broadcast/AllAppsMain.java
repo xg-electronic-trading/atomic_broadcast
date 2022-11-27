@@ -3,6 +3,9 @@
  */
 package atomic_broadcast;
 
+import atomic_broadcast.aeron.AeronModule;
+import atomic_broadcast.aeron.AeronTransportClient;
+import atomic_broadcast.client.TransportClient;
 import atomic_broadcast.utils.CompositeModule;
 import atomic_broadcast.utils.ConnectAs;
 import atomic_broadcast.utils.ConnectUsing;
@@ -18,7 +21,8 @@ public class AllAppsMain {
         params.connectAs(ConnectAs.Client).connectUsing(ConnectUsing.Multicast);
 
         AeronModule aeronModule = new AeronModule(true, true, false);
-        AeronTransportModule transportModule = new AeronTransportModule(aeronModule, params);
+        TransportClient transportClient = new AeronTransportClient(aeronModule, params);
+        EventBusTransportModule transportModule = new EventBusTransportModule(transportClient, params);
 
         modules.add(aeronModule);
         modules.add(transportModule);

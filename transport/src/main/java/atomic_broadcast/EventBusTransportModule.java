@@ -1,20 +1,20 @@
 package atomic_broadcast;
 
-import atomic_broadcast.client.ClientTransport;
+import atomic_broadcast.client.ClientTransportWorker;
+import atomic_broadcast.client.TransportClient;
 import atomic_broadcast.client.TransportSession;
-import atomic_broadcast.sequencer.SequencerTransport;
 import atomic_broadcast.utils.Module;
 import atomic_broadcast.utils.TransportParams;
 
-public class AeronTransportModule implements Module {
+public class EventBusTransportModule implements Module {
 
-    private final AeronModule aeronModule;
+    private final TransportClient transportClient;
     private final TransportParams params;
 
-    private TransportSession transport;
+    private TransportSession transportSession;
 
-    public AeronTransportModule(AeronModule aeronModule, TransportParams params) {
-        this.aeronModule = aeronModule;
+    public EventBusTransportModule(TransportClient transportClient, TransportParams params) {
+        this.transportClient = transportClient;
         this.params = params;
     }
 
@@ -23,27 +23,23 @@ public class AeronTransportModule implements Module {
     public void start() {
         switch (params.connectAs()) {
             case Client:
-                transport = new ClientTransport(params);
-                break;
-
-            case Sequencer:
-                transport = new SequencerTransport(params);
+                transportSession = new ClientTransportWorker(params, transportClient);
                 break;
 
             default:
                 throw new IllegalArgumentException("error: trying to connect as: " + params.connectAs());
         }
 
-        transport.start();
+        transportSession.start();
     }
 
     @Override
     public void close() {
-        transport.stop();
+        transportSession.stop();
     }
 
     @Override
     public void poll() {
-        transport.poll();
+        transportSession.poll();
     }
 }

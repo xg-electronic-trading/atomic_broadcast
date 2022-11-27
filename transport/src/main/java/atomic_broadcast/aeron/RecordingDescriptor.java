@@ -1,4 +1,4 @@
-package atomic_broadcast.utils;
+package atomic_broadcast.aeron;
 
 import io.aeron.Image;
 import io.aeron.Subscription;
@@ -27,7 +27,7 @@ public class RecordingDescriptor
     {
         this.controlSessionId = 0;
         this.correlationId = 0;
-        this.recordingId = 0;
+        this.recordingId = -1;
         this.startTimestamp = 0;
         this.stopTimestamp = 0;
         this.startPosition = 0;

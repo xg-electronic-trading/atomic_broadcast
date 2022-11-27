@@ -1,8 +1,8 @@
 package atomic_broadcast;
 
-import atomic_broadcast.utils.RecordingDescriptor;
-import atomic_broadcast.utils.RecordingDescriptorConsumerImpl;
-import atomic_broadcast.utils.RecordingSignalConsumerImpl;
+import atomic_broadcast.aeron.RecordingDescriptor;
+import atomic_broadcast.aeron.RecordingDescriptorConsumerImpl;
+import atomic_broadcast.aeron.RecordingSignalConsumerImpl;
 import io.aeron.*;
 import io.aeron.archive.Archive;
 import io.aeron.archive.ArchiveThreadingMode;
@@ -33,8 +33,8 @@ public class ReplayMergeFromReplicatedArchiveTest {
     private static final int STREAM_ID = 1033;
 
     private static final String CONTROL_ENDPOINT = "localhost:23265";
-    private static final String LIVE_ENDPOINT = "localhost:23267";
-    private static final String LIVE_ENDPOINT_2 = "localhost:23268";
+    private static final String LIVE_ENDPOINT = "localhost:0";
+    private static final String LIVE_ENDPOINT_2 = "localhost:0";
     private static final String REPLAY_ENDPOINT = "localhost:0";
 
     public static final String REPLICATION_CHANNEL = "aeron:udp?endpoint=localhost:0";
