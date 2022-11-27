@@ -4,11 +4,15 @@ public enum TransportState implements CodedEnum {
     NoState(-1),
     ConnectToJournalSource(0),
     FindJournal(1),
-    ConnectToEventStream(2),
-    PollEventStream(3),
+    CreateNewJournal(2),
+    ConnectToEventStream(3),
+    PollEventStream(4),
 
     //sequencer specific states
-    AdvertiseSeqNum(4);
+    FindLeader(5),
+    StartReplication(6),
+    StopRepliaction(7);
+
 
 
     private int code;

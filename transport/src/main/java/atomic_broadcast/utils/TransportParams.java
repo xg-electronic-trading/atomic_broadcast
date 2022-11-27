@@ -9,6 +9,7 @@ public class TransportParams {
 
     private ConnectAs connectAs = ConnectAs.Client;
     private ConnectUsing connectUsing = ConnectUsing.Ipc;
+    private int instanceId;
     private final ArrayList<MessageListener> listeners = new ArrayList<>(10);
 
     public TransportParams connectAs(ConnectAs connectAs) {
@@ -18,6 +19,11 @@ public class TransportParams {
 
     public TransportParams connectUsing(ConnectUsing connectUsing) {
         this.connectUsing = connectUsing;
+        return this;
+    }
+
+    public TransportParams instanceiD(int instanceId) {
+        this.instanceId = instanceId;
         return this;
     }
 
@@ -36,4 +42,6 @@ public class TransportParams {
     }
 
     public List<MessageListener> listeners() { return listeners; }
+
+    public int instanceId() { return instanceId; }
 }
