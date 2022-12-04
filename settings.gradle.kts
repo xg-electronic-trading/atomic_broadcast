@@ -8,6 +8,7 @@
  */
 
 rootProject.name = "atomic_broadcast"
+include("message-encoders")
 include("transport")
 include("algo-container")
 include("perf-benchmarks")
