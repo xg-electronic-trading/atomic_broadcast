@@ -12,7 +12,8 @@ repositories {
 val codecGeneration: Configuration by configurations.creating
 
 dependencies {
-    codecGeneration("uk.co.real-logic:sbe-tool:1.26.0")
+    val sbeVersion = libs.sbe.all.get().versionConstraint.requiredVersion
+    codecGeneration("uk.co.real-logic:sbe-tool:${sbeVersion}")
     implementation(libs.bundles.real.logic)
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
