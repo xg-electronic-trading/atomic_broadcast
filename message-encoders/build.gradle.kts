@@ -5,9 +5,6 @@
 
 version = "unspecified"
 
-val generatedSrcDir = file("${buildDir}/generated-src")
-val generatedTestDir = file("${buildDir}/generated-test")
-
 repositories {
     mavenCentral()
 }
@@ -20,16 +17,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
-
-/*sourceSets.create("generated") {
-    java.srcDir(generatedSrcDir)
-    compileClasspath += configurations.getByName("codecGeneration")
-}*/
-
-/*sourceSets.create("generatedTest") {
-    java.srcDir(generatedTestDir)
-    compileClasspath += configurations.getByName("codecGeneration")
-}*/
 
 tasks.register<JavaExec>("generateEncoders") {
     val codecsFile = "src/main/resources/fix/messages.xml"
