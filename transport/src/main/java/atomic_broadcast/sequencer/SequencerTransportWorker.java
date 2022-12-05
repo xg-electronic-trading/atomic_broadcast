@@ -1,8 +1,8 @@
 package atomic_broadcast.sequencer;
 
 import atomic_broadcast.client.TransportSession;
+import atomic_broadcast.consensus.SeqNoProvider;
 import atomic_broadcast.consensus.SeqNumSnapshot;
-import atomic_broadcast.consensus.ShmSeqNoClient;
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
 import com.epam.deltix.gflog.api.Log;
@@ -17,17 +17,17 @@ public class SequencerTransportWorker implements TransportSession {
 
     private final TransportParams params;
     private final SequencerTransport transportClient;
-    private final ShmSeqNoClient shmSeqNoClient;
+    private final SeqNoProvider seqNoProvider;
 
     private TransportState state = NoState;
 
     public SequencerTransportWorker(
             TransportParams params,
             SequencerTransport transportClient,
-            ShmSeqNoClient shmSeqNoClient) {
+            SeqNoProvider seqNoProvider) {
         this.params = params;
         this.transportClient = transportClient;
-        this.shmSeqNoClient = shmSeqNoClient;
+        this.seqNoProvider = seqNoProvider;
     }
 
 
@@ -81,7 +81,7 @@ public class SequencerTransportWorker implements TransportSession {
     }
 
     private void determineLeader() {
-        SeqNumSnapshot snapshot = shmSeqNoClient.readSeqNums();
+        SeqNumSnapshot snapshot = seqNoProvider.takeSnapshot();
         if(snapshot.isReady()) {
             if (params.instanceId() == snapshot.leaderInstance()) {
                 setState(ConnectToJournalSource);
@@ -100,7 +100,7 @@ public class SequencerTransportWorker implements TransportSession {
     }
 
     private void findJournal() {
-        SeqNumSnapshot snapshot = shmSeqNoClient.readSeqNums();
+        SeqNumSnapshot snapshot = seqNoProvider.takeSnapshot();
         if (snapshot.isReady()) {
             boolean journalFound = transportClient.findJournal();
             boolean isLeader = snapshot.leaderInstance() == params.instanceId();
