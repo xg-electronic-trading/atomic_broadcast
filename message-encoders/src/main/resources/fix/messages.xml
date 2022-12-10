@@ -23,6 +23,7 @@
                    description="Sample SBE Messages"
                    byteOrder="littleEndian">
     <types>
+        <type name="seqNo" primitiveType="uint64"/>
         <type name="date" primitiveType="uint16"/>
         <type name="enumEncoding" primitiveType="char"/>
         <type name="idString" length="8" primitiveType="char"/>
@@ -63,6 +64,10 @@
             <type name="day" primitiveType="uint8"/>
             <type name="week" primitiveType="uint8"/>
         </composite>
+        <enum name="BooleanType" encodingType="uint8">
+            <validValue name="F">0</validValue>
+            <validValue name="T">1</validValue>
+        </enum>
         <enum name="TimeUnit" encodingType="uint8">
             <validValue name="second">0</validValue>
             <validValue name="millisecond">3</validValue>
@@ -109,7 +114,7 @@
         </enum>
     </types>
 
-    <message name="ExecutionReport" id="98" blockLength="42" semanticType="8">
+    <sbe:message name="ExecutionReport" id="98" semanticType="8">
         <field name="OrderID" id="37" type="idString" offset="0" semanticType="String"/>
         <field name="ExecID" id="17" type="idString" offset="8" semanticType="String"/>
         <field name="ExecType" id="150" type="execTypeEnum" offset="16" semanticType="char"/>
@@ -124,8 +129,8 @@
             <field name="FillPx" id="1364" type="decimalEncoding" offset="0" semanticType="Price"/>
             <field name="FillQty" id="1365" type="qtyEncoding" offset="8" semanticType="Qty"/>
         </group>
-    </message>
-    <message name="NewOrderSingle" id="99" blockLength="54" semanticType="D">
+    </sbe:message>
+    <sbe:message name="NewOrderSingle" id="99" semanticType="D">
         <field name="ClOrdId" id="11" type="idString" offset="0" semanticType="String"/>
         <field name="Account" id="1" type="idString" offset="8" semanticType="String"/>
         <field name="Symbol" id="55" type="idString" offset="16" semanticType="String"/>
@@ -135,6 +140,15 @@
         <field name="OrdType" id="40" type="ordTypeEnum" offset="37" semanticType="char"/>
         <field name="Price" id="44" type="decimalEncoding" offset="38" semanticType="Price" presence="optional"/>
         <field name="StopPx" id="99" type="decimalEncoding" offset="46" semanticType="Price" presence="optional"/>
-    </message>
+    </sbe:message>
+
+    <sbe:message name="SeqNumSnapshot" id="1" description="snapshot of sequence numbers for components">
+        <field name="IsReady" id="999" type="BooleanType"/>
+        <group name="SequencerHighwatermarks" id="1000">
+            <field name="component" id="2000" type="uint32"/>
+            <field name="instance" id="2001" type="uint32"/>
+            <field name="seqNo" id="2002" type="uint64"/>
+        </group>
+    </sbe:message>
 
 </sbe:messageSchema>

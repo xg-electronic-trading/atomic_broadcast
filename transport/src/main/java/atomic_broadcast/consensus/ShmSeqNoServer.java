@@ -7,32 +7,35 @@ import org.agrona.concurrent.UnsafeBuffer;
 import java.io.File;
 import java.nio.MappedByteBuffer;
 
-public class ShmSeqNoClient implements AutoCloseable {
+public class ShmSeqNoServer implements SeqNumSnapshotWriter {
 
     private UnsafeBuffer buffer;
     private final MappedByteBuffer mmap;
-    private final int IS_READY_OFFSET = 0;
-    private final int NUM_OF_SEQUENCERS_OFFSET = 8;
 
     private final String SEQ_NUM_FILE =
             ShmFileConstants.SHM_DIR +
             ShmFileConstants.SEQ_NUM_FILE +
             ShmFileConstants.SHM_SUFFIX;
 
-    public ShmSeqNoClient() {
+    public ShmSeqNoServer() {
         File file = new File(SEQ_NUM_FILE);
-        IoUtil.checkFileExists(file, ShmFileConstants.SEQ_NUM_FILE);
-        mmap = IoUtil.mapExistingFile(file, ShmFileConstants.SEQ_NUM_FILE);
+        if (file.exists()) {
+            mmap = IoUtil.mapExistingFile(file, ShmFileConstants.SEQ_NUM_FILE);
+        } else {
+            mmap =  IoUtil.mapNewFile(file, ShmFileConstants.SEQ_NUM_FILE_SIZE_BYTES);
+        }
+
         buffer = new UnsafeBuffer(mmap);
     }
 
-    public SeqNumSnapshot readSeqNums() {
-        return null;
+
+    @Override
+    public void setReady(boolean isReady) {
+
     }
 
     @Override
-    public void close() throws Exception {
-        IoUtil.unmap(mmap);
-        buffer = null;
+    public void writeSeqNum(int component, int instance, int seqNo) {
+
     }
 }
