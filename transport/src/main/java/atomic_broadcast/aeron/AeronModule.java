@@ -1,7 +1,9 @@
 package atomic_broadcast.aeron;
 
+import atomic_broadcast.utils.ConnectAs;
 import atomic_broadcast.utils.Module;
 import atomic_broadcast.utils.OperatingSystem;
+import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import io.aeron.Aeron;
@@ -11,6 +13,7 @@ import io.aeron.archive.Archive;
 import io.aeron.archive.ArchiveThreadingMode;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
 import org.agrona.CloseHelper;
@@ -26,7 +29,13 @@ public class AeronModule implements Module {
 
     public static final String REPLICATION_CHANNEL = "aeron:udp?endpoint=localhost:0";
     public static final String CONTROL_REQUEST_CHANNEL = "aeron:udp?endpoint=localhost:8010";
+    public static final String REMOTE_CONTROL_REQUEST_CHANNEL = "aeron:udp?endpoint=localhost:8011";
     public static final String CONTROL_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:0";
+    public static final String COMMAND_ENDPOINT = "localost:40001";
+    public static final String CONTROL_ENDPOINT = "localhost:23265";
+    public static final String DYNAMIC_ENDPOINT = "localhost:0";
+    public static final int EVENT_STREAM_ID = 10_000_000;
+    public static final int COMMAND_STREAM_ID = 20_000_000;
     private static final String AERON_DIR_NAME = "/Users/fa/sandbox/shm/aeron";
     private static final String AERON_ARCHIVE_DIR_NAME = "/Users/fa/sandbox/shm/aeron-archive";
 
@@ -38,12 +47,15 @@ public class AeronModule implements Module {
     private Aeron aeron;
     private ArchivingMediaDriver archivingMediaDriver;
 
-    private AeronArchive.Context archiveClientCtx;
     private AeronArchive.AsyncConnect asyncConnect;
     private AeronArchive aeronArchive;
+    private AeronArchive srcAeronArchive; // this is the archive instance to replicate from.
 
     private final RecordingDescriptorConsumerImpl recordingDescriptorConsumer = new RecordingDescriptorConsumerImpl();
     private RecordingDescriptor recordingDescriptor = new RecordingDescriptor();
+
+    private long replicationSessionId;
+    private long recordingSubscriptionId;
 
     public AeronModule(boolean startMediaDriverInProcess, boolean connectToMediaDriver, boolean lowLatencyMode) {
         this.startMediaDriverInProcess = startMediaDriverInProcess;
@@ -99,11 +111,6 @@ public class AeronModule implements Module {
                     new Aeron.Context()
                             .aeronDirectoryName(AERON_DIR_NAME));
 
-            archiveClientCtx = new AeronArchive.Context()
-                    .controlRequestChannel(controlRequestChannel())
-                    .controlResponseChannel(controlResponseChannel())
-                    .aeron(aeron);
-
             System.out.println("connected to media driver");
         }
     }
@@ -111,6 +118,7 @@ public class AeronModule implements Module {
     @Override
     public void close() {
         CloseHelper.closeAll(
+                srcAeronArchive,
                 aeronArchive,
                 aeron,
                 archivingMediaDriver,
@@ -125,33 +133,52 @@ public class AeronModule implements Module {
 
     }
 
-    public String controlRequestChannel() {
-        return CONTROL_REQUEST_CHANNEL;
-    }
-
-    public String controlResponseChannel() {
-        return CONTROL_RESPONSE_CHANNEL;
+    private AeronArchive.Context createNewArchiveCtx(String controlRequestChannel) {
+        return new AeronArchive.Context()
+                .controlRequestChannel(controlRequestChannel)
+                .controlResponseChannel(CONTROL_RESPONSE_CHANNEL)
+                .aeron(aeron);
     }
 
     public boolean connectToArchive() {
+        if (null != aeronArchive) {
+            aeronArchive.close();
+        }
+        aeronArchive = connectToArchive(createNewArchiveCtx(CONTROL_REQUEST_CHANNEL));
+        return null != aeronArchive;
+    }
+
+    private boolean connectToSrcArchive() {
+        if(null != srcAeronArchive) {
+            srcAeronArchive.close();
+        }
+        srcAeronArchive = connectToArchive(createNewArchiveCtx(REMOTE_CONTROL_REQUEST_CHANNEL));
+        return null != srcAeronArchive;
+    }
+
+    private AeronArchive connectToArchive(AeronArchive.Context ctx) {
+        AeronArchive archive = null;
         if (null == asyncConnect) {
-            asyncConnect = AeronArchive.asyncConnect(archiveClientCtx);
+            asyncConnect = AeronArchive.asyncConnect(ctx);
         } else {
-            aeronArchive = asyncConnect.poll();
-            if(null != aeronArchive) {
+            archive = asyncConnect.poll();
+            if(null != archive) {
                 asyncConnect = null;
-                return true;
             }
         }
 
-        return false;
+        return archive;
     }
 
     public RecordingDescriptor findRecording() {
+        return findRecording(aeronArchive);
+    }
+
+    private RecordingDescriptor findRecording(AeronArchive archive) {
         recordingDescriptorConsumer.getRecordingDescriptors().clear(); //will generate garbage when emptying. not used in steady state
 
-        if (null !=  aeronArchive) {
-            int recordingsFound = aeronArchive.listRecordings(0, Integer.MAX_VALUE, recordingDescriptorConsumer);
+        if (null !=  archive) {
+            int recordingsFound = archive.listRecordings(0, Integer.MAX_VALUE, recordingDescriptorConsumer);
             if (recordingsFound > 0) {
                Optional<RecordingDescriptor> recordingOpt = recordingDescriptorConsumer.getRecordingDescriptors().stream().max(Comparator.comparing(RecordingDescriptor::startTimestamp));
                return recordingOpt.orElse(recordingDescriptor);
@@ -163,12 +190,68 @@ public class AeronModule implements Module {
         return recordingDescriptor;
     }
 
+    public boolean startReplication(TransportParams params, RecordingDescriptor dstRecordingId) {
+        if (params.connectAs() == ConnectAs.Client) {
+            throw new UnsupportedOperationException("client application cannot perform replication.");
+        } else {
+            boolean isConnectedToSrcArchive = connectToSrcArchive();
+            if (isConnectedToSrcArchive) {
+                RecordingDescriptor srcRecording = findRecording(srcAeronArchive);
+                replicationSessionId = aeronArchive.replicate(
+                        srcRecording.recordingId(),
+                        dstRecordingId.recordingId(),
+                        AeronArchive.Configuration.CONTROL_STREAM_ID_DEFAULT,
+                        REMOTE_CONTROL_REQUEST_CHANNEL,
+                        null //populate pubchannel to merge back to live stream.
+                );
+
+                return Aeron.NULL_VALUE != replicationSessionId;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    public void closeReplication() {
+        if (Aeron.NULL_VALUE != replicationSessionId) {
+            aeronArchive.stopReplication(replicationSessionId);
+            replicationSessionId =  Aeron.NULL_VALUE;
+        }
+    }
+
     public Subscription addSubscription(String channel, int stream) {
         return aeron.addSubscription(channel, stream);
     }
 
+    public void closeSubscription(Subscription subscription) {
+        if (null != subscription) {
+          subscription.close();
+        }
+    }
+
     public Publication addPublication(String channel, int stream) {
         return aeron.addPublication(channel, stream);
+    }
+
+    public void closePublication(Publication publication) {
+        if (null != publication) {
+            publication.close();
+        }
+    }
+
+    public boolean startRecording(String channel, int stream) {
+        if (Aeron.NULL_VALUE == recordingSubscriptionId) {
+            recordingSubscriptionId = aeronArchive.startRecording(channel, stream, SourceLocation.LOCAL);
+        }
+
+        return Aeron.NULL_VALUE != recordingSubscriptionId;
+    }
+
+    public void closeRecording() {
+        if (recordingSubscriptionId != Aeron.NULL_VALUE) {
+           aeronArchive.stopRecording(recordingSubscriptionId);
+           recordingSubscriptionId = Aeron.NULL_VALUE;
+        }
     }
 
     public AeronArchive aeronArchive() {

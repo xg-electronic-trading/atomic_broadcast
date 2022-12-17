@@ -34,7 +34,7 @@ public class AeronClientFragmentHandler implements FragmentHandler {
              *  3. update highwatermark
              */
             for (int i = 0; i < listeners.size(); i++) {
-                listeners.get(i).onMessage(buffer, offset, length, header, false);
+                listeners.get(i).onMessage(buffer, offset, length, seqNoHolder.get(), false);
             }
         } else {
             /**

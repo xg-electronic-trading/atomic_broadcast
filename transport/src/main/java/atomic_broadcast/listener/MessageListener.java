@@ -4,5 +4,5 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 
 public interface MessageListener {
-    void onMessage(DirectBuffer buffer, int offset, int length, Header header, boolean isReplay);
+    void onMessage(DirectBuffer buffer, int offset, int length, long seqNum, boolean isReplay);
 }

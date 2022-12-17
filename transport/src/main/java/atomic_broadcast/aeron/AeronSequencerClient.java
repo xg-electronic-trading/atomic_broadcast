@@ -1,6 +1,6 @@
 package atomic_broadcast.aeron;
 
-import atomic_broadcast.client.TransportClient;
+import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.utils.TransportParams;
 import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
@@ -8,17 +8,30 @@ import io.aeron.archive.client.ReplayMerge;
 import io.aeron.logbuffer.FragmentHandler;
 
 import static atomic_broadcast.aeron.AeronModule.*;
-import static io.aeron.archive.client.RecordingSignalPoller.FRAGMENT_LIMIT;
 
-public class AeronTransportClient implements TransportClient {
+public class AeronSequencerClient implements SequencerClient {
 
-    AeronModule aeronModule;
-    TransportParams params;
+    private static final int PUBLICATION_TAG = 2;
 
+    private final AeronModule aeronModule;
+    private final TransportParams params;
     private RecordingDescriptor latestRecording;
     private Subscription subscription;
+    private Publication publication;
     private ReplayMerge replayMerge;
     private FragmentHandler fragmentHandler;
+
+    private final String commandStreamSubscriptionChannel = new ChannelUriStringBuilder()
+            .media(CommonContext.UDP_MEDIA)
+            .endpoint(COMMAND_ENDPOINT)
+            .build();
+
+    private final String publicationChannel = new ChannelUriStringBuilder()
+            .media(CommonContext.UDP_MEDIA)
+            .tags("1," + PUBLICATION_TAG)
+            .controlEndpoint(CONTROL_ENDPOINT) //change this to endpoint and remove control mode when using multicast
+            .controlMode(CommonContext.MDC_CONTROL_MODE_DYNAMIC)
+            .build();
 
     ChannelUriStringBuilder udpSubscriptionChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
@@ -32,10 +45,10 @@ public class AeronTransportClient implements TransportClient {
             .endpoint(DYNAMIC_ENDPOINT)
             .build();
 
-    public AeronTransportClient(AeronModule aeronModule, TransportParams params) {
+    public AeronSequencerClient(AeronModule aeronModule, TransportParams params) {
         this.aeronModule = aeronModule;
         this.params = params;
-        this.fragmentHandler = new FragmentAssembler(new AeronClientFragmentHandler(params.listeners()));
+        this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(params.listeners()));
     }
 
     @Override
@@ -74,7 +87,7 @@ public class AeronTransportClient implements TransportClient {
                         udpReplayDestinationChannel,
                         liveDestination,
                         aeronModule.aeronArchive()
-                        );
+                );
 
                 return true;
 
@@ -83,21 +96,12 @@ public class AeronTransportClient implements TransportClient {
             case Journal:
         }
 
-        return false;
+        return true;
     }
 
     @Override
     public boolean pollEventStream() {
-        if (replayMerge != null) {
-            if (!replayMerge.isMerged()) {
-                replayMerge.poll(fragmentHandler, FRAGMENT_LIMIT);
-            } else {
-                replayMerge = null;
-            }
-        } else {
-            subscription.poll(fragmentHandler, FRAGMENT_LIMIT);
-        }
-        return true;
+        return false;
     }
 
     @Override
@@ -105,12 +109,59 @@ public class AeronTransportClient implements TransportClient {
         return subscription.isConnected();
     }
 
+    @Override
+    public boolean connectToCommandStream() {
+        if (null == subscription) {
+            subscription = aeronModule.addSubscription(commandStreamSubscriptionChannel, COMMAND_STREAM_ID);
+            return subscription != null;
+        } else {
+            return true;
+        }
+    }
+
+    @Override
+    public boolean pollCommandStream() {
+        subscription.poll(fragmentHandler, 1000);
+        return true;
+    }
+
+    @Override
+    public boolean startReplication() {
+        return aeronModule.startReplication(params, latestRecording);
+    }
+
+    @Override
+    public boolean stopReplication() {
+        aeronModule.closeReplication();
+        return true;
+    }
+
+    @Override
+    public boolean createEventStream() {
+        if (null == publication) {
+            publication = aeronModule.addPublication(publicationChannel, EVENT_STREAM_ID);
+            return publication != null;
+        } else {
+            return true;
+        }
+    }
+
+    @Override
+    public boolean createEventJournal() {
+        return aeronModule.startRecording(publicationChannel, EVENT_STREAM_ID);
+    }
+
+    @Override
+    public boolean isPublicationConnected() {
+        return publication.isConnected();
+    }
+
     private ReplayMerge replayMerge(long recordingId,
-                             String subscriptionChannel,
-                             String replayChannel,
-                             String replayDestination,
-                             String liveDestination,
-                             AeronArchive aeronArchive) {
+                                    String subscriptionChannel,
+                                    String replayChannel,
+                                    String replayDestination,
+                                    String liveDestination,
+                                    AeronArchive aeronArchive) {
         subscription = aeronModule.addSubscription(subscriptionChannel, EVENT_STREAM_ID);
 
         return new ReplayMerge(
@@ -125,7 +176,10 @@ public class AeronTransportClient implements TransportClient {
     }
 
     @Override
-    public void close() throws Exception {
+    public void close() {
         aeronModule.closeSubscription(subscription);
+        aeronModule.closeReplication();
+        aeronModule.closeRecording();
+        aeronModule.closePublication(publication);
     }
 }

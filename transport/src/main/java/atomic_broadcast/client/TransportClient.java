@@ -1,6 +1,6 @@
 package atomic_broadcast.client;
 
-public interface TransportClient {
+public interface TransportClient extends AutoCloseable {
 
     boolean connectToJournalSource();
 
@@ -9,5 +9,7 @@ public interface TransportClient {
     boolean connectToEventStream();
 
     boolean pollEventStream();
+
+    boolean isSubscriptionConnected();
 
 }

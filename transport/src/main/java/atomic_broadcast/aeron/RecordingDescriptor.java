@@ -23,6 +23,10 @@ public class RecordingDescriptor
     private String sourceIdentity;
     private boolean isRetained = false;
 
+    public RecordingDescriptor(){
+        reset();
+    }
+
     public RecordingDescriptor reset()
     {
         this.controlSessionId = 0;

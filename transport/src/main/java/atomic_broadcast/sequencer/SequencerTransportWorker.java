@@ -16,14 +16,15 @@ public class SequencerTransportWorker implements TransportSession {
     private static final Log log = LogFactory.getLog(SequencerTransportWorker.class.getName());
 
     private final TransportParams params;
-    private final SequencerTransport transportClient;
+    private final SequencerClient transportClient;
     private final SeqNoProvider seqNoProvider;
+    private boolean active = false;
 
     private TransportState state = NoState;
 
     public SequencerTransportWorker(
             TransportParams params,
-            SequencerTransport transportClient,
+            SequencerClient transportClient,
             SeqNoProvider seqNoProvider) {
         this.params = params;
         this.transportClient = transportClient;
@@ -33,12 +34,12 @@ public class SequencerTransportWorker implements TransportSession {
 
     @Override
     public boolean isSubscriptionConnected() {
-        return false;
+        return transportClient.isSubscriptionConnected();
     }
 
     @Override
     public boolean isPublicationConnected() {
-        return false;
+        return transportClient.isPublicationConnected();
     }
 
     @Override
@@ -48,7 +49,11 @@ public class SequencerTransportWorker implements TransportSession {
 
     @Override
     public void stop() {
-
+        try {
+            transportClient.close();
+        } catch (Exception e){
+            log.error().append("error whilst closing: ").appendLast(e);
+        }
     }
 
     @Override
@@ -65,12 +70,26 @@ public class SequencerTransportWorker implements TransportSession {
             case FindJournal:
                 findJournal();
                 break;
+            case CreateEventStream:
+                createEventStream();
+                break;
+            case CreateEventJournal:
+                createNewJournal();
+                break;
+            case ConnectToCommandStream:
+                connectToCommandStream();
+            case PollCommandStream:
+                pollCommandStream();
             case StartReplication:
+                startReplication();
                 break;
             case StopRepliaction:
+                stopReplication();
                 break;
-            case ConnectToEventStream:
-                state = transportClient.connectToEventStream() ? PollEventStream : ConnectToEventStream;
+            case StartReplayMerge:
+                state = transportClient.connectToEventStream() ? PollEventStream : StartReplayMerge;
+                break;
+            case StartReplay:
                 break;
             case PollEventStream:
                 transportClient.pollEventStream();
@@ -80,10 +99,16 @@ public class SequencerTransportWorker implements TransportSession {
         return true;
     }
 
+    @Override
+    public TransportState state() {
+        return state;
+    }
+
     private void determineLeader() {
         SeqNumSnapshot snapshot = seqNoProvider.takeSnapshot();
         if(snapshot.isReady()) {
-            if (params.instanceId() == snapshot.leaderInstance()) {
+            if (isLeader(snapshot)) {
+                active = true;
                 setState(ConnectToJournalSource);
             } else {
                 setState(StartReplication);
@@ -100,16 +125,60 @@ public class SequencerTransportWorker implements TransportSession {
     }
 
     private void findJournal() {
-        SeqNumSnapshot snapshot = seqNoProvider.takeSnapshot();
-        if (snapshot.isReady()) {
-            boolean journalFound = transportClient.findJournal();
-            boolean isLeader = snapshot.leaderInstance() == params.instanceId();
-            if (!journalFound && isLeader) {
-                setState(CreateNewJournal);
+        boolean journalFound = transportClient.findJournal();
+        if (!journalFound) {
+            if (active) {
+                setState(CreateEventStream);
             } else {
-                setState(ConnectToEventStream);
+                setState(StartReplication);
+            }
+        } else {
+            if (active) {
+                setState(StartReplay);
+            } else {
+                setState(StartReplication);
             }
         }
+    }
+
+    private void createEventStream() {
+        boolean eventStreamCreated = transportClient.createEventStream();
+        if (eventStreamCreated && isPublicationConnected()) {
+            setState(CreateEventJournal);
+        }
+    }
+
+    private void createNewJournal() {
+        boolean isJournalCreated = transportClient.createEventJournal();
+        if (isJournalCreated) {
+           setState(ConnectToCommandStream);
+        }
+    }
+
+    private void connectToCommandStream() {
+        boolean isSubscriptionCreated = transportClient.connectToCommandStream();
+        if (isSubscriptionCreated && isSubscriptionConnected()) {
+            setState(PollCommandStream);
+        }
+    }
+
+    private void pollCommandStream() {
+        if (isSubscriptionConnected()) {
+            transportClient.pollCommandStream();
+        } else {
+            setState(ConnectToCommandStream);
+        }
+    }
+
+    private void startReplication() {
+        boolean replicationStarted = transportClient.startReplication();
+        if (replicationStarted) {
+            setState(StartReplayMerge);
+        }
+    }
+
+    private void stopReplication() {
+        boolean isReplicationStopped = transportClient.stopReplication();
     }
 
     private void setState(TransportState newState) {
@@ -122,5 +191,9 @@ public class SequencerTransportWorker implements TransportSession {
     @Override
     public boolean publish(UnsafeBuffer buffer, int offset, int length) {
         return false;
+    }
+
+    private boolean isLeader(SeqNumSnapshot snapshot) {
+        return snapshot.leaderInstance() == params.instanceId();
     }
 }

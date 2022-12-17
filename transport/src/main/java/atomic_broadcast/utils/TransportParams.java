@@ -22,7 +22,7 @@ public class TransportParams {
         return this;
     }
 
-    public TransportParams instanceiD(int instanceId) {
+    public TransportParams instance(int instanceId) {
         this.instanceId = instanceId;
         return this;
     }

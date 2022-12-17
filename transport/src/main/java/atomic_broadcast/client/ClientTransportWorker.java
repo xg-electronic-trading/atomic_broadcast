@@ -1,16 +1,19 @@
 package atomic_broadcast.client;
 
-
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
+import com.epam.deltix.gflog.api.Log;
+import com.epam.deltix.gflog.api.LogFactory;
 import org.agrona.concurrent.UnsafeBuffer;
 
 import static atomic_broadcast.utils.TransportState.*;
 
 public class ClientTransportWorker implements TransportSession {
 
-    private TransportParams params;
-    private TransportClient transportClient;
+    private static final Log log = LogFactory.getLog(ClientTransportWorker.class.getName());
+
+    private final TransportParams params;
+    private final TransportClient transportClient;
     private TransportState state = NoState;
 
     public ClientTransportWorker(TransportParams params, TransportClient transportClient) {
@@ -35,13 +38,22 @@ public class ClientTransportWorker implements TransportSession {
 
     @Override
     public void stop() {
-
+        try {
+            transportClient.close();
+        } catch (Exception e) {
+            log.error().append("error whilst closing: ").appendLast(e);
+        }
     }
 
     @Override
     public boolean poll() {
         doWork();
         return true;
+    }
+
+    @Override
+    public TransportState state() {
+        return state;
     }
 
     @Override
@@ -58,10 +70,10 @@ public class ClientTransportWorker implements TransportSession {
                 state = transportClient.connectToJournalSource() ? FindJournal : ConnectToJournalSource;
                 break;
             case FindJournal:
-                state = transportClient.findJournal() ? ConnectToEventStream : FindJournal;
+                state = transportClient.findJournal() ? StartReplayMerge : FindJournal;
                 break;
-            case ConnectToEventStream:
-                state = transportClient.connectToEventStream() ? PollEventStream : ConnectToEventStream;
+            case StartReplayMerge:
+                state = transportClient.connectToEventStream() ? PollEventStream : StartReplayMerge;
                 break;
             case PollEventStream:
                 transportClient.pollEventStream();

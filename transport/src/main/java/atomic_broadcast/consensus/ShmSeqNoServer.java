@@ -31,11 +31,11 @@ public class ShmSeqNoServer implements SeqNumSnapshotWriter {
 
     @Override
     public void setReady(boolean isReady) {
-
+        buffer.putByte(0, isReady ? (byte) 1 : (byte) 0);
     }
 
     @Override
     public void writeSeqNum(int component, int instance, int seqNo) {
-
+        buffer.putLong(1, seqNo);
     }
 }
