@@ -57,7 +57,7 @@ public class AeronSequencerClient implements SequencerClient {
     public AeronSequencerClient(AeronModule aeronModule, TransportParams params) {
         this.aeronModule = aeronModule;
         this.params = params;
-        this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(params.listeners()));
+        this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(this, params.listeners()));
     }
 
     @Override

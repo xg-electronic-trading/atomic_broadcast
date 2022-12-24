@@ -11,8 +11,7 @@ import atomic_broadcast.consensus.SeqNoClient;
 import atomic_broadcast.consensus.SeqNoProvider;
 import atomic_broadcast.consensus.ShmSeqNoClient;
 import atomic_broadcast.consensus.ShmSeqNoServer;
-import atomic_broadcast.sequencer.SequencerClient;
-import atomic_broadcast.sequencer.SequencerModule;
+import atomic_broadcast.sequencer.*;
 import atomic_broadcast.utils.CompositeModule;
 import atomic_broadcast.utils.ConnectAs;
 import atomic_broadcast.utils.ConnectUsing;
@@ -41,6 +40,7 @@ public class AllAppsMain {
             sequencerParams
                     .connectAs(ConnectAs.Sequencer)
                     .connectUsing(ConnectUsing.Unicast)
+                    .addListener(new SequencerCommandHandler())
                     .instance(1);
 
             AeronModule aeronModule = new AeronModule(true, true, false);
