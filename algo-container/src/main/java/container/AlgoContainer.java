@@ -1,20 +1,17 @@
 package container;
 
-import atomic_broadcast.client.TransportSession;
 import orderstate.StateCache;
 import subscriptions.MarketDataPoller;
 
 public class AlgoContainer implements Container {
 
-    private final TransportSession transport;
+
     private final MarketDataPoller marketData;
     private final StateCache osCache;
 
     public AlgoContainer(
-            TransportSession transport,
             MarketDataPoller marketData,
             StateCache osCache) {
-        this.transport = transport;
         this.marketData = marketData;
         this.osCache = osCache;
     }
@@ -33,7 +30,7 @@ public class AlgoContainer implements Container {
     @Override
     public void executeCalcCycle() {
         // 1. poll events
-        transport.poll();
+
         // 2. poll market data + market data derived signals
         marketData.poll();
 

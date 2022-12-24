@@ -1,6 +1,6 @@
 package atomic_broadcast.sequencer;
 
-import atomic_broadcast.client.TransportSession;
+import atomic_broadcast.client.TransportWorker;
 import atomic_broadcast.consensus.SeqNoProvider;
 import atomic_broadcast.utils.Module;
 import atomic_broadcast.utils.TransportParams;
@@ -11,7 +11,7 @@ public class SequencerModule implements Module {
     private final TransportParams params;
     private final SequencerClient transport;
     private final SeqNoProvider seqNoProvider;
-    private TransportSession transportSession;
+    private TransportWorker transportSession;
 
     public SequencerModule(
             TransportParams params,
@@ -35,7 +35,7 @@ public class SequencerModule implements Module {
 
     @Override
     public void close() {
-        transportSession.stop();
+        transportSession.close();
     }
 
     @Override

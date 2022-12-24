@@ -1,6 +1,5 @@
 package atomic_broadcast.listener;
 
-import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 
 public interface MessageListener {

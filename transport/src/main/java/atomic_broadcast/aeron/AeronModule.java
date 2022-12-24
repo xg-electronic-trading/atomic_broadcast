@@ -13,6 +13,7 @@ import io.aeron.archive.Archive;
 import io.aeron.archive.ArchiveThreadingMode;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.codecs.RecordingSignal;
 import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
@@ -52,7 +53,8 @@ public class AeronModule implements Module {
     private AeronArchive srcAeronArchive; // this is the archive instance to replicate from.
 
     private final RecordingDescriptorConsumerImpl recordingDescriptorConsumer = new RecordingDescriptorConsumerImpl();
-    private RecordingDescriptor recordingDescriptor = new RecordingDescriptor();
+    private final RecordingSignalConsumerImpl recordingSignalConsumer = new RecordingSignalConsumerImpl();
+    private final RecordingDescriptor recordingDescriptor = new RecordingDescriptor();
 
     private long replicationSessionId;
     private long recordingSubscriptionId;
@@ -137,6 +139,7 @@ public class AeronModule implements Module {
         return new AeronArchive.Context()
                 .controlRequestChannel(controlRequestChannel)
                 .controlResponseChannel(CONTROL_RESPONSE_CHANNEL)
+                .recordingSignalConsumer(recordingSignalConsumer)
                 .aeron(aeron);
     }
 
@@ -233,6 +236,10 @@ public class AeronModule implements Module {
         return aeron.addPublication(channel, stream);
     }
 
+    public Publication addExclusivePublication(String channel, int stream) {
+        return aeron.addExclusivePublication(channel, stream);
+    }
+
     public void closePublication(Publication publication) {
         if (null != publication) {
             publication.close();
@@ -251,6 +258,20 @@ public class AeronModule implements Module {
         if (recordingSubscriptionId != Aeron.NULL_VALUE) {
            aeronArchive.stopRecording(recordingSubscriptionId);
            recordingSubscriptionId = Aeron.NULL_VALUE;
+        }
+    }
+
+    public boolean pollForRecordingSignal(RecordingSignal signal) {
+        return pollForRecordingSignal(aeronArchive, signal);
+    }
+
+    private boolean pollForRecordingSignal(AeronArchive archive, RecordingSignal signal) {
+        if (recordingSignalConsumer.getSignal() != signal) {
+            archive.pollForRecordingSignals();
+            return false;
+        } else {
+            log.info().append("recording signal: ").appendLast(recordingSignalConsumer.getSignal());
+            return true;
         }
     }
 

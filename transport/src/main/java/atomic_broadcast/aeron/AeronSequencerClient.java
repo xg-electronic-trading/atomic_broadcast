@@ -2,14 +2,22 @@ package atomic_broadcast.aeron;
 
 import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.utils.TransportParams;
+import com.epam.deltix.gflog.api.Log;
+import com.epam.deltix.gflog.api.LogFactory;
 import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.ReplayMerge;
+import io.aeron.archive.codecs.RecordingSignal;
+import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.FragmentHandler;
+import org.agrona.concurrent.UnsafeBuffer;
 
 import static atomic_broadcast.aeron.AeronModule.*;
+import static io.aeron.Publication.*;
 
 public class AeronSequencerClient implements SequencerClient {
+
+    private static final Log log = LogFactory.getLog(AeronSequencerClient.class.getName());
 
     private static final int PUBLICATION_TAG = 2;
 
@@ -20,6 +28,7 @@ public class AeronSequencerClient implements SequencerClient {
     private Publication publication;
     private ReplayMerge replayMerge;
     private FragmentHandler fragmentHandler;
+    private final BufferClaim bufferClaim = new BufferClaim();
 
     private final String commandStreamSubscriptionChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
@@ -110,6 +119,11 @@ public class AeronSequencerClient implements SequencerClient {
     }
 
     @Override
+    public boolean isSubscriptionClosed() {
+        return subscription.isClosed();
+    }
+
+    @Override
     public boolean connectToCommandStream() {
         if (null == subscription) {
             subscription = aeronModule.addSubscription(commandStreamSubscriptionChannel, COMMAND_STREAM_ID);
@@ -139,7 +153,7 @@ public class AeronSequencerClient implements SequencerClient {
     @Override
     public boolean createEventStream() {
         if (null == publication) {
-            publication = aeronModule.addPublication(publicationChannel, EVENT_STREAM_ID);
+            publication = aeronModule.addExclusivePublication(publicationChannel, EVENT_STREAM_ID);
             return publication != null;
         } else {
             return true;
@@ -148,12 +162,51 @@ public class AeronSequencerClient implements SequencerClient {
 
     @Override
     public boolean createEventJournal() {
-        return aeronModule.startRecording(publicationChannel, EVENT_STREAM_ID);
+        boolean isCreated = aeronModule.startRecording(publicationChannel, EVENT_STREAM_ID);
+        if (isCreated) {
+            return aeronModule.pollForRecordingSignal(RecordingSignal.START);
+        } else {
+            return false;
+        }
+
     }
 
     @Override
     public boolean isPublicationConnected() {
         return publication.isConnected();
+    }
+
+    @Override
+    public boolean isPublicationClosed() {
+        return publication.isClosed();
+    }
+
+    @Override
+    public boolean publish(UnsafeBuffer buffer, int offset, int length) {
+        if (null != publication) {
+            if (length > publication.maxPayloadLength()) {
+                /**
+                 * send messages > MTU using standard offer().
+                 * these will be fragmented over the wire.
+                 */
+                long result = publication.offer(buffer, offset, length);
+                return processResult(result);
+            } else {
+                /**
+                 * send messages <= MTU via tryClaim() using
+                 * zero copy semantics for increased performance.
+                 */
+                long result = publication.tryClaim(length, bufferClaim);
+                if (result > 0) {
+                    bufferClaim.commit();
+                } else {
+                    bufferClaim.abort();
+                }
+                return processResult(result);
+            }
+        } else {
+            return false;
+        }
     }
 
     private ReplayMerge replayMerge(long recordingId,
@@ -173,6 +226,27 @@ public class AeronSequencerClient implements SequencerClient {
                 recordingId,
                 0
         );
+    }
+
+    private boolean processResult(long publicationResult) {
+        if (publicationResult == NOT_CONNECTED) {
+            log.error().appendLast("publication not connected.");
+            return false;
+        } else if (publicationResult == BACK_PRESSURED) {
+            log.error().appendLast("publication back pressured. please retry offer.");
+            return false;
+        } else if (publicationResult == ADMIN_ACTION) {
+            log.error().appendLast("publication admin action. please retry offer.");
+            return false;
+        } else if (publicationResult == CLOSED) {
+            log.error().appendLast("publication closed. cannot offer.");
+            return false;
+        } else if (publicationResult == MAX_POSITION_EXCEEDED) {
+            log.error().appendLast("max position exceeded. publication should be closed and then a new one added.");
+            return false;
+        }
+
+        return true;
     }
 
     @Override

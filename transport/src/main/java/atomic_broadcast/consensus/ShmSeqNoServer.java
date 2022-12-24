@@ -22,6 +22,7 @@ public class ShmSeqNoServer implements SeqNumSnapshotWriter {
         if (file.exists()) {
             mmap = IoUtil.mapExistingFile(file, ShmFileConstants.SEQ_NUM_FILE);
         } else {
+
             mmap =  IoUtil.mapNewFile(file, ShmFileConstants.SEQ_NUM_FILE_SIZE_BYTES);
         }
 

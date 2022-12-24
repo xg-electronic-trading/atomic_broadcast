@@ -12,4 +12,6 @@ public interface TransportClient extends AutoCloseable {
 
     boolean isSubscriptionConnected();
 
+    boolean isSubscriptionClosed();
+
 }

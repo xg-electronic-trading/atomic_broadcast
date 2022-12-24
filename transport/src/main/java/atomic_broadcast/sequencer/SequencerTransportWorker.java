@@ -1,17 +1,16 @@
 package atomic_broadcast.sequencer;
 
-import atomic_broadcast.client.TransportSession;
+import atomic_broadcast.client.TransportWorker;
 import atomic_broadcast.consensus.SeqNoProvider;
 import atomic_broadcast.consensus.SeqNumSnapshot;
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
-import org.agrona.concurrent.UnsafeBuffer;
 
 import static atomic_broadcast.utils.TransportState.*;
 
-public class SequencerTransportWorker implements TransportSession {
+public class SequencerTransportWorker implements TransportWorker {
 
     private static final Log log = LogFactory.getLog(SequencerTransportWorker.class.getName());
 
@@ -31,24 +30,13 @@ public class SequencerTransportWorker implements TransportSession {
         this.seqNoProvider = seqNoProvider;
     }
 
-
-    @Override
-    public boolean isSubscriptionConnected() {
-        return transportClient.isSubscriptionConnected();
-    }
-
-    @Override
-    public boolean isPublicationConnected() {
-        return transportClient.isPublicationConnected();
-    }
-
     @Override
     public void start() {
         state = FindLeader;
     }
 
     @Override
-    public void stop() {
+    public void close() {
         try {
             transportClient.close();
         } catch (Exception e){
@@ -143,7 +131,7 @@ public class SequencerTransportWorker implements TransportSession {
 
     private void createEventStream() {
         boolean eventStreamCreated = transportClient.createEventStream();
-        if (eventStreamCreated && isPublicationConnected()) {
+        if (eventStreamCreated) {
             setState(CreateEventJournal);
         }
     }
@@ -157,16 +145,16 @@ public class SequencerTransportWorker implements TransportSession {
 
     private void connectToCommandStream() {
         boolean isSubscriptionCreated = transportClient.connectToCommandStream();
-        if (isSubscriptionCreated && isSubscriptionConnected()) {
+        if (isSubscriptionCreated) {
             setState(PollCommandStream);
         }
     }
 
     private void pollCommandStream() {
-        if (isSubscriptionConnected()) {
-            transportClient.pollCommandStream();
-        } else {
+        if (transportClient.isPublicationClosed()) {
             setState(ConnectToCommandStream);
+        } else {
+            transportClient.pollCommandStream();
         }
     }
 
@@ -186,11 +174,6 @@ public class SequencerTransportWorker implements TransportSession {
             state = newState;
             log.info().append("new state: ").appendLast(state);
         }
-    }
-
-    @Override
-    public boolean publish(UnsafeBuffer buffer, int offset, int length) {
-        return false;
     }
 
     private boolean isLeader(SeqNumSnapshot snapshot) {

@@ -105,6 +105,11 @@ public class AeronTransportClient implements TransportClient {
         return subscription.isConnected();
     }
 
+    @Override
+    public boolean isSubscriptionClosed() {
+        return subscription.isClosed();
+    }
+
     private ReplayMerge replayMerge(long recordingId,
                              String subscriptionChannel,
                              String replayChannel,

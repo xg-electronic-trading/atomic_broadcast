@@ -8,7 +8,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 
 import static atomic_broadcast.utils.TransportState.*;
 
-public class ClientTransportWorker implements TransportSession {
+public class ClientTransportWorker implements TransportWorker {
 
     private static final Log log = LogFactory.getLog(ClientTransportWorker.class.getName());
 
@@ -22,22 +22,12 @@ public class ClientTransportWorker implements TransportSession {
     }
 
     @Override
-    public boolean isSubscriptionConnected() {
-        return false;
-    }
-
-    @Override
-    public boolean isPublicationConnected() {
-        return false;
-    }
-
-    @Override
     public void start() {
         state = ConnectToJournalSource;
     }
 
     @Override
-    public void stop() {
+    public void close() {
         try {
             transportClient.close();
         } catch (Exception e) {
@@ -55,12 +45,6 @@ public class ClientTransportWorker implements TransportSession {
     public TransportState state() {
         return state;
     }
-
-    @Override
-    public boolean publish(UnsafeBuffer buffer, int offset, int length) {
-        return false;
-    }
-
 
     private int doWork() {
         switch (state) {

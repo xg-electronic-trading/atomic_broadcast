@@ -2,7 +2,7 @@ package atomic_broadcast;
 
 import atomic_broadcast.client.ClientTransportWorker;
 import atomic_broadcast.client.TransportClient;
-import atomic_broadcast.client.TransportSession;
+import atomic_broadcast.client.TransportWorker;
 import atomic_broadcast.utils.Module;
 import atomic_broadcast.utils.TransportParams;
 
@@ -11,7 +11,7 @@ public class EventBusTransportModule implements Module {
     private final TransportClient transportClient;
     private final TransportParams params;
 
-    private TransportSession transportSession;
+    private TransportWorker transportSession;
 
     public EventBusTransportModule(TransportClient transportClient, TransportParams params) {
         this.transportClient = transportClient;
@@ -35,7 +35,7 @@ public class EventBusTransportModule implements Module {
 
     @Override
     public void close() {
-        transportSession.stop();
+        transportSession.close();
     }
 
     @Override
