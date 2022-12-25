@@ -41,6 +41,9 @@ tasks.register<JavaExec>("generateEncoders") {
 
 tasks.getByName<Test>("test") {
     useJUnitPlatform()
+    testLogging {
+        events("passed")
+    }
 }
 
 tasks.named<JavaCompile>("compileJava") {
