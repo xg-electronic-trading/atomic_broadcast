@@ -1,8 +1,5 @@
-package atomic_broadcast;
+package atomic_broadcast.client;
 
-import atomic_broadcast.client.ClientTransportWorker;
-import atomic_broadcast.client.TransportClient;
-import atomic_broadcast.client.TransportWorker;
 import atomic_broadcast.utils.Module;
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;

@@ -125,13 +125,25 @@ public class AeronModule implements Module {
                 aeronArchive,
                 aeron,
                 archivingMediaDriver,
-                () -> archivingMediaDriver.archive().context().deleteDirectory(),
-                () -> archivingMediaDriver.mediaDriver().context().deleteDirectory());
+                this::deletearchiveDir,
+                this::deleteMediaDriverDir);
 
         log.info().appendLast("closed src archive");
         log.info().appendLast("closed local archive");
         log.info().appendLast("closed aeron");
         log.info().appendLast("closed media driver");
+    }
+
+    private void deletearchiveDir() {
+        if (null != archivingMediaDriver) {
+            archivingMediaDriver.archive().context().deleteDirectory();
+        }
+    }
+
+    private void deleteMediaDriverDir() {
+        if (null != archivingMediaDriver) {
+            archivingMediaDriver.mediaDriver().context().deleteDirectory();
+        }
     }
 
     @Override

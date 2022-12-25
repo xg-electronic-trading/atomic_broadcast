@@ -3,16 +3,8 @@
  */
 package atomic_broadcast;
 
-import atomic_broadcast.aeron.AeronModule;
-import atomic_broadcast.aeron.AeronSequencerClient;
-import atomic_broadcast.aeron.AeronTransportClient;
-import atomic_broadcast.client.TransportClient;
-import atomic_broadcast.consensus.SeqNoClient;
-import atomic_broadcast.consensus.SeqNoProvider;
-import atomic_broadcast.consensus.ShmSeqNoClient;
-import atomic_broadcast.consensus.ShmSeqNoServer;
+import atomic_broadcast.host.Host;
 import atomic_broadcast.sequencer.*;
-import atomic_broadcast.utils.CompositeModule;
 import atomic_broadcast.utils.ConnectAs;
 import atomic_broadcast.utils.ConnectUsing;
 import atomic_broadcast.utils.TransportParams;
@@ -28,50 +20,35 @@ public class AllAppsMain {
 
     public static void main(String[] args) {
         try {
-            CompositeModule modules = new CompositeModule();
-
-            ShmSeqNoServer shmSeqNoServer = new ShmSeqNoServer();
-            shmSeqNoServer.setReady(true);
-            shmSeqNoServer.writeSeqNum(1, 1, 0);
-
             TransportParams clientParams = new TransportParams();
-            TransportParams sequencerParams = new TransportParams();
+            clientParams
+                    .connectAs(ConnectAs.Client)
+                    .connectUsing(ConnectUsing.Unicast);
 
-            clientParams.connectAs(ConnectAs.Client).connectUsing(ConnectUsing.Unicast);
+            TransportParams sequencerParams = new TransportParams();
             sequencerParams
                     .connectAs(ConnectAs.Sequencer)
                     .connectUsing(ConnectUsing.Unicast)
                     .addListener(new SequencerCommandHandler())
                     .instance(1);
 
-            AeronModule aeronModule = new AeronModule(true, true, false);
+            Host host = new Host("host-a");
 
-            SequencerClient sequencerClient = new AeronSequencerClient(aeronModule, sequencerParams);
-            SeqNoProvider seqNoProvider = new SeqNoClient(new ShmSeqNoClient());
-            SequencerModule sequencerModule = new SequencerModule(sequencerParams, sequencerClient, seqNoProvider);
+            host.deployShmSeqNoServer()
+                    .deployMediaDriver()
+                    .deploySequencer(sequencerParams)
+                    .deployClient(clientParams)
+                    .start();
 
-            TransportClient transportClient = new AeronTransportClient(aeronModule, clientParams);
-            EventBusTransportModule transportModule = new EventBusTransportModule(transportClient, clientParams);
-
-            modules.add(aeronModule);
-            modules.add(sequencerModule);
-            modules.add(transportModule);
-
-            modules.start();
-
-            while (sequencerModule.state() != PollCommandStream) {
-                modules.poll();
+            while (host.sequencer().state() != PollCommandStream) {
+                host.modules().poll();
             }
 
-            while(transportModule.state() != PollEventStream) {
-                modules.poll();
+            while(host.eventbus().state() != PollEventStream) {
+                host.modules().poll();
             }
 
-
-            log.info().append("seq publication connected: ").appendLast(sequencerClient.isPublicationConnected());
-            log.info().append("client subscription connected: ").appendLast(transportClient.isSubscriptionConnected());
-
-            modules.close();
+            host.modules().close();
         } catch (Exception e) {
            log.error().append("error in AllAppsMain: ").appendLast(e);
         }

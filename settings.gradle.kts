@@ -7,7 +7,7 @@
  * in the user manual at https://docs.gradle.org/7.4.2/userguide/multi_project_builds.html
  */
 
-rootProject.name = "atomic_broadcast"
+rootProject.name = "atomic-broadcast"
 include("message-encoders")
 include("transport")
 include("algo-container")
