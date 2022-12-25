@@ -2,6 +2,8 @@ package atomic_broadcast.aeron;
 
 import atomic_broadcast.client.TransportClient;
 import atomic_broadcast.utils.TransportParams;
+import com.epam.deltix.gflog.api.Log;
+import com.epam.deltix.gflog.api.LogFactory;
 import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.ReplayMerge;
@@ -11,6 +13,8 @@ import static atomic_broadcast.aeron.AeronModule.*;
 import static io.aeron.archive.client.RecordingSignalPoller.FRAGMENT_LIMIT;
 
 public class AeronTransportClient implements TransportClient {
+
+    private static final Log log = LogFactory.getLog(AeronTransportClient.class.getName());
 
     AeronModule aeronModule;
     TransportParams params;
@@ -51,52 +55,65 @@ public class AeronTransportClient implements TransportClient {
 
     @Override
     public boolean connectToEventStream() {
-        switch (params.connectUsing()) {
-            case Unicast:
-                String subscriptionChannel = udpSubscriptionChannel
-                        .sessionId(latestRecording.sessionId())
-                        .build();
+        try {
+            switch (params.connectUsing()) {
+                case Unicast:
+                    String subscriptionChannel = udpSubscriptionChannel
+                            .sessionId(latestRecording.sessionId())
+                            .build();
 
-                String replayChannel = udpReplayChannel
-                        .sessionId(latestRecording.sessionId())
-                        .build();
+                    String replayChannel = udpReplayChannel
+                            .sessionId(latestRecording.sessionId())
+                            .build();
 
-                String liveDestination = new ChannelUriStringBuilder()
-                        .media(CommonContext.UDP_MEDIA)
-                        .controlEndpoint(CONTROL_ENDPOINT)
-                        .endpoint(DYNAMIC_ENDPOINT)
-                        .build();
+                    String liveDestination = new ChannelUriStringBuilder()
+                            .media(CommonContext.UDP_MEDIA)
+                            .controlEndpoint(CONTROL_ENDPOINT)
+                            .endpoint(DYNAMIC_ENDPOINT)
+                            .build();
 
-                replayMerge = replayMerge(
-                        latestRecording.recordingId(),
-                        subscriptionChannel,
-                        replayChannel,
-                        udpReplayDestinationChannel,
-                        liveDestination,
-                        aeronModule.aeronArchive()
-                        );
+                    replayMerge = replayMerge(
+                            latestRecording.recordingId(),
+                            subscriptionChannel,
+                            replayChannel,
+                            udpReplayDestinationChannel,
+                            liveDestination,
+                            aeronModule.aeronArchive()
+                    );
 
-                return true;
+                    return true;
 
-            case Multicast:
-            case Ipc:
-            case Journal:
+                case Multicast:
+                case Ipc:
+                case Journal:
+            }
+        } catch (Exception e) {
+            log.error().append("exception whilst trying to connect to event stream: ").appendLast(e);
+            return false;
         }
 
         return false;
     }
 
     @Override
-    public boolean pollEventStream() {
+    public boolean pollReplay() {
         if (replayMerge != null) {
             if (!replayMerge.isMerged()) {
                 replayMerge.poll(fragmentHandler, FRAGMENT_LIMIT);
+                return false;
             } else {
+                log.info().appendLast(replayMerge);
                 replayMerge = null;
+                return true;
             }
         } else {
-            subscription.poll(fragmentHandler, FRAGMENT_LIMIT);
+            return true;
         }
+    }
+
+    @Override
+    public boolean pollEventStream() {
+        subscription.poll(fragmentHandler, FRAGMENT_LIMIT);
         return true;
     }
 

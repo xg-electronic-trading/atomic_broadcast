@@ -5,6 +5,7 @@ import atomic_broadcast.client.TransportClient;
 import atomic_broadcast.client.TransportWorker;
 import atomic_broadcast.utils.Module;
 import atomic_broadcast.utils.TransportParams;
+import atomic_broadcast.utils.TransportState;
 
 public class EventBusTransportModule implements Module {
 
@@ -42,4 +43,6 @@ public class EventBusTransportModule implements Module {
     public void poll() {
         transportSession.poll();
     }
+
+    public TransportState state() { return transportSession.state(); }
 }

@@ -4,7 +4,6 @@ import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
-import org.agrona.concurrent.UnsafeBuffer;
 
 import static atomic_broadcast.utils.TransportState.*;
 
@@ -51,19 +50,63 @@ public class ClientTransportWorker implements TransportWorker {
             case NoState:
                 break;
             case ConnectToJournalSource:
-                state = transportClient.connectToJournalSource() ? FindJournal : ConnectToJournalSource;
+                connectToJournalSource();
                 break;
             case FindJournal:
-                state = transportClient.findJournal() ? StartReplayMerge : FindJournal;
+                findJournal();
                 break;
             case StartReplayMerge:
-                state = transportClient.connectToEventStream() ? PollEventStream : StartReplayMerge;
+                startReplayMerge();
+                break;
+            case PollReplayMerge:
+                pollReplay();
                 break;
             case PollEventStream:
-                transportClient.pollEventStream();
+                pollEventStream();
                 break;
         }
 
         return state.getCode();
+    }
+
+    private void connectToJournalSource() {
+        if (transportClient.connectToJournalSource()) {
+            setState(FindJournal);
+        } else {
+            setState(ConnectToJournalSource);
+        }
+    }
+
+    private void findJournal() {
+        if (transportClient.findJournal()) {
+            setState(StartReplayMerge);
+        }
+    }
+
+    private void startReplayMerge() {
+        if (transportClient.connectToEventStream()) {
+            setState(PollReplayMerge);
+        }
+    }
+
+    private void pollReplay() {
+        if (transportClient.pollReplay()) {
+            setState(PollEventStream);
+        }
+    }
+
+    private void pollEventStream() {
+        if (transportClient.isSubscriptionClosed()) {
+            setState(StartReplayMerge);
+        } else {
+            transportClient.pollEventStream();
+        }
+    }
+
+    private void setState(TransportState newState) {
+        if (this.state != newState) {
+            state = newState;
+            log.info().append("new state: ").appendLast(state);
+        }
     }
 }

@@ -114,6 +114,11 @@ public class AeronSequencerClient implements SequencerClient {
     }
 
     @Override
+    public boolean pollReplay() {
+        return false;
+    }
+
+    @Override
     public boolean isSubscriptionConnected() {
         return subscription.isConnected();
     }

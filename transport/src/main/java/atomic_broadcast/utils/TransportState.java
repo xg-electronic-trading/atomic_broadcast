@@ -17,7 +17,8 @@ public enum TransportState implements CodedEnum {
     CreateEventStream(10),
     ExtendEventStream(11),
     ExtendEventJournal(12),
-    PollCommandStream(13);
+    PollCommandStream(13),
+    PollReplayMerge(14);
 
 
 

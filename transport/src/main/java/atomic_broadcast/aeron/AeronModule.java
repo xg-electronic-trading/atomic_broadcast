@@ -149,7 +149,7 @@ public class AeronModule implements Module {
 
     public boolean connectToArchive() {
         if (null != aeronArchive) {
-            aeronArchive.close();
+            return true;
         }
         aeronArchive = connectToArchive(createNewArchiveCtx(CONTROL_REQUEST_CHANNEL));
         return null != aeronArchive;
@@ -157,7 +157,7 @@ public class AeronModule implements Module {
 
     private boolean connectToSrcArchive() {
         if(null != srcAeronArchive) {
-            srcAeronArchive.close();
+            return true;
         }
         srcAeronArchive = connectToArchive(createNewArchiveCtx(REMOTE_CONTROL_REQUEST_CHANNEL));
         return null != srcAeronArchive;

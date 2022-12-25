@@ -10,6 +10,8 @@ public interface TransportClient extends AutoCloseable {
 
     boolean pollEventStream();
 
+    boolean pollReplay();
+
     boolean isSubscriptionConnected();
 
     boolean isSubscriptionClosed();

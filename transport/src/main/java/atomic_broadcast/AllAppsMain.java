@@ -20,6 +20,7 @@ import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 
 import static atomic_broadcast.utils.TransportState.PollCommandStream;
+import static atomic_broadcast.utils.TransportState.PollEventStream;
 
 public class AllAppsMain {
 
@@ -52,16 +53,23 @@ public class AllAppsMain {
             TransportClient transportClient = new AeronTransportClient(aeronModule, clientParams);
             EventBusTransportModule transportModule = new EventBusTransportModule(transportClient, clientParams);
 
-
             modules.add(aeronModule);
             modules.add(sequencerModule);
-            //modules.add(transportModule);
+            modules.add(transportModule);
 
             modules.start();
 
             while (sequencerModule.state() != PollCommandStream) {
                 modules.poll();
             }
+
+            while(transportModule.state() != PollEventStream) {
+                modules.poll();
+            }
+
+
+            log.info().append("seq publication connected: ").appendLast(sequencerClient.isPublicationConnected());
+            log.info().append("client subscription connected: ").appendLast(transportClient.isSubscriptionConnected());
 
             modules.close();
         } catch (Exception e) {
