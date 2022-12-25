@@ -35,5 +35,5 @@ jobs:
     - name: Test Summary
       uses: test-summary/action@v2
       with:
-        paths: "test-results/test/TEST-*.xml"
+        paths: "build/test-results/test/TEST-*.xml"
       if: always()
