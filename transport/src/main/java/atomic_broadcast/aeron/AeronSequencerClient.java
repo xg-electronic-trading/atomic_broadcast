@@ -10,7 +10,7 @@ import io.aeron.archive.client.ReplayMerge;
 import io.aeron.archive.codecs.RecordingSignal;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.FragmentHandler;
-import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.DirectBuffer;
 
 import static atomic_broadcast.aeron.AeronModule.*;
 import static io.aeron.Publication.*;
@@ -182,7 +182,7 @@ public class AeronSequencerClient implements SequencerClient {
     }
 
     @Override
-    public boolean publish(UnsafeBuffer buffer, int offset, int length) {
+    public boolean publish(DirectBuffer buffer, int offset, int length) {
         if (null != publication) {
             if (length > publication.maxPayloadLength()) {
                 /**

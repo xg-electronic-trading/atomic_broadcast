@@ -1,7 +1,7 @@
 package atomic_broadcast.listener;
 
-import org.agrona.DirectBuffer;
+import schema.api.Packet;
 
 public interface MessageListener {
-    void onMessage(DirectBuffer buffer, int offset, int length, long seqNum, boolean isReplay);
+    void onMessage(Packet buffer, boolean isReplay);
 }

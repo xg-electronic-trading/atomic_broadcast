@@ -1,7 +1,7 @@
 package atomic_broadcast.sequencer;
 
 import atomic_broadcast.client.TransportClient;
-import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.DirectBuffer;
 
 public interface SequencerClient extends TransportClient {
 
@@ -21,6 +21,6 @@ public interface SequencerClient extends TransportClient {
 
     boolean isPublicationClosed();
 
-    boolean publish(UnsafeBuffer buffer, int offset, int length);
+    boolean publish(DirectBuffer buffer, int offset, int length);
 
 }
