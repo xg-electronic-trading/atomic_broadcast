@@ -32,7 +32,7 @@ public class AeronModule implements Module {
     public static final String CONTROL_REQUEST_CHANNEL = "aeron:udp?endpoint=localhost:8010";
     public static final String REMOTE_CONTROL_REQUEST_CHANNEL = "aeron:udp?endpoint=localhost:8011";
     public static final String CONTROL_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:0";
-    public static final String COMMAND_ENDPOINT = "localost:40001";
+    public static final String COMMAND_ENDPOINT = "localhost:40001";
     public static final String CONTROL_ENDPOINT = "localhost:23265";
     public static final String DYNAMIC_ENDPOINT = "localhost:0";
     public static final int EVENT_STREAM_ID = 10_000_000;
@@ -56,8 +56,8 @@ public class AeronModule implements Module {
     private final RecordingSignalConsumerImpl recordingSignalConsumer = new RecordingSignalConsumerImpl();
     private final RecordingDescriptor recordingDescriptor = new RecordingDescriptor();
 
-    private long replicationSessionId;
-    private long recordingSubscriptionId;
+    private long replicationSessionId = Aeron.NULL_VALUE;
+    private long recordingSubscriptionId = Aeron.NULL_VALUE;
 
     public AeronModule(boolean startMediaDriverInProcess, boolean connectToMediaDriver, boolean lowLatencyMode) {
         this.startMediaDriverInProcess = startMediaDriverInProcess;
@@ -75,6 +75,7 @@ public class AeronModule implements Module {
             Archive.Context archiveCtx = new Archive.Context();
             archiveCtx.recordingEventsEnabled(false)
                     .controlChannel(CONTROL_REQUEST_CHANNEL)
+                    .archiveClientContext(new AeronArchive.Context().controlResponseChannel(CONTROL_RESPONSE_CHANNEL))
                     .replicationChannel(REPLICATION_CHANNEL);
 
             ctx.termBufferSparseFile(false)
@@ -105,7 +106,7 @@ public class AeronModule implements Module {
 
 
             archivingMediaDriver = ArchivingMediaDriver.launch(ctx, archiveCtx);
-            System.out.println("launched media driver");
+            log.info().appendLast("launched media driver");
         }
 
         if (connectToMediaDriver) {
@@ -113,7 +114,7 @@ public class AeronModule implements Module {
                     new Aeron.Context()
                             .aeronDirectoryName(AERON_DIR_NAME));
 
-            System.out.println("connected to media driver");
+            log.info().appendLast("connected to media driver");
         }
     }
 
@@ -127,7 +128,10 @@ public class AeronModule implements Module {
                 () -> archivingMediaDriver.archive().context().deleteDirectory(),
                 () -> archivingMediaDriver.mediaDriver().context().deleteDirectory());
 
-        System.out.println("closed media driver");
+        log.info().appendLast("closed src archive");
+        log.info().appendLast("closed local archive");
+        log.info().appendLast("closed aeron");
+        log.info().appendLast("closed media driver");
     }
 
     @Override

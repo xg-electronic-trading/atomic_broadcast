@@ -66,8 +66,10 @@ public class SequencerTransportWorker implements TransportWorker {
                 break;
             case ConnectToCommandStream:
                 connectToCommandStream();
+                break;
             case PollCommandStream:
                 pollCommandStream();
+                break;
             case StartReplication:
                 startReplication();
                 break;

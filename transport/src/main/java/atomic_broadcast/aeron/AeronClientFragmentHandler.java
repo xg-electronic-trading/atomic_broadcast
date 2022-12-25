@@ -4,6 +4,8 @@ import atomic_broadcast.listener.MessageListener;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import schema.api.Packet;
+import schema.api.PacketReader;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,6 +14,7 @@ public class AeronClientFragmentHandler implements FragmentHandler {
 
     private final List<MessageListener> listeners;
     private final AtomicLong seqNoHolder = new AtomicLong(-1);
+    private final PacketReader packet = new PacketReader();
 
     public AeronClientFragmentHandler(List<MessageListener> listeners) {
         this.listeners = listeners;
@@ -19,7 +22,8 @@ public class AeronClientFragmentHandler implements FragmentHandler {
 
     @Override
     public void onFragment(DirectBuffer buffer, int offset, int length, Header header) {
-        long incomingSeqNo = buffer.getLong(offset);
+        packet.wrap(buffer, offset);
+        long incomingSeqNo = packet.seqNo();
         long currentSeqNo = seqNoHolder.get();
 
         if (incomingSeqNo <= currentSeqNo) {
@@ -34,7 +38,7 @@ public class AeronClientFragmentHandler implements FragmentHandler {
              *  3. update highwatermark
              */
             for (int i = 0; i < listeners.size(); i++) {
-                listeners.get(i).onMessage(buffer, offset, length, seqNoHolder.get(), false);
+                listeners.get(i).onMessage(packet, false);
             }
         } else {
             /**

@@ -19,7 +19,7 @@ import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 
-import static atomic_broadcast.utils.TransportState.PollEventStream;
+import static atomic_broadcast.utils.TransportState.PollCommandStream;
 
 public class AllAppsMain {
 
@@ -59,7 +59,7 @@ public class AllAppsMain {
 
             modules.start();
 
-            while (sequencerModule.state() != PollEventStream) {
+            while (sequencerModule.state() != PollCommandStream) {
                 modules.poll();
             }
 
