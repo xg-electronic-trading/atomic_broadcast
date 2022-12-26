@@ -1,9 +1,9 @@
 package atomic_broadcast.sequencer;
 
-import atomic_broadcast.client.TransportClient;
+import atomic_broadcast.client.EventSubscriber;
 import org.agrona.DirectBuffer;
 
-public interface SequencerClient extends TransportClient {
+public interface SequencerClient extends EventSubscriber {
 
     boolean connectToCommandStream();
 

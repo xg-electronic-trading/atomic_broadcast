@@ -2,6 +2,7 @@ package atomic_broadcast.host;
 
 import atomic_broadcast.aeron.*;
 import atomic_broadcast.client.EventBusTransportModule;
+import atomic_broadcast.client.EventSubscriber;
 import atomic_broadcast.client.TransportClient;
 import atomic_broadcast.consensus.SeqNoClient;
 import atomic_broadcast.consensus.SeqNoProvider;

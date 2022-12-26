@@ -22,7 +22,7 @@ public class ClientTransportWorker implements TransportWorker {
 
     @Override
     public void start() {
-        state = ConnectToJournalSource;
+        setState(ConnectToCommandStream);
     }
 
     @Override
@@ -49,6 +49,9 @@ public class ClientTransportWorker implements TransportWorker {
         switch (state) {
             case NoState:
                 break;
+            case ConnectToCommandStream:
+                connectToCommandStream();
+                break;
             case ConnectToJournalSource:
                 connectToJournalSource();
                 break;
@@ -67,6 +70,12 @@ public class ClientTransportWorker implements TransportWorker {
         }
 
         return state.getCode();
+    }
+
+    private void connectToCommandStream() {
+        if(transportClient.connectToCommandStream()) {
+            setState(ConnectToJournalSource);
+        }
     }
 
     private void connectToJournalSource() {

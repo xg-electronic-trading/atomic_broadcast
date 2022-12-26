@@ -32,7 +32,7 @@ public class SequencerTransportWorker implements TransportWorker {
 
     @Override
     public void start() {
-        state = FindLeader;
+        setState(FindLeader);
     }
 
     @Override

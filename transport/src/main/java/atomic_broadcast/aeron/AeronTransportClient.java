@@ -20,9 +20,15 @@ public class AeronTransportClient implements TransportClient {
     TransportParams params;
 
     private RecordingDescriptor latestRecording;
+    private Publication publication;
     private Subscription subscription;
     private ReplayMerge replayMerge;
     private FragmentHandler fragmentHandler;
+
+    private final String commandStreamPublicationChannel = new ChannelUriStringBuilder()
+            .media(CommonContext.UDP_MEDIA)
+            .endpoint(COMMAND_ENDPOINT)
+            .build();
 
     ChannelUriStringBuilder udpSubscriptionChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
@@ -148,6 +154,29 @@ public class AeronTransportClient implements TransportClient {
 
     @Override
     public void close() throws Exception {
+        aeronClient.closePublication(publication);
         aeronClient.closeSubscription(subscription);
+        publication = null;
+        subscription = null;
+    }
+
+    @Override
+    public boolean connectToCommandStream() {
+        if (null == publication) {
+            publication = aeronClient.addPublication(commandStreamPublicationChannel, COMMAND_STREAM_ID);
+            return null != publication;
+        } else {
+            return true;
+        }
+    }
+
+    @Override
+    public boolean isPublicationConnected() {
+        return publication.isConnected();
+    }
+
+    @Override
+    public boolean isPublicationClosed() {
+        return publication.isClosed();
     }
 }

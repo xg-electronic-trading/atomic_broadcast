@@ -260,5 +260,7 @@ public class AeronSequencerClient implements SequencerClient {
         aeronClient.closeReplication();
         aeronClient.closeRecording();
         aeronClient.closePublication(publication);
+        subscription = null;
+        publication = null;
     }
 }
