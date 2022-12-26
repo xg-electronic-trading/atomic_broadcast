@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":message-encoders"))
     implementation("com.google.guava:guava:30.1.1-jre")
     implementation(libs.bundles.real.logic)
+    implementation(libs.config)
 
     implementation(libs.gflog.api)
     runtimeOnly(libs.gflog.core)

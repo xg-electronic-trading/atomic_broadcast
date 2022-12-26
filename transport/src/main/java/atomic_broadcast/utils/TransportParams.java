@@ -5,7 +5,7 @@ import atomic_broadcast.listener.MessageListener;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TransportParams {
+public class TransportParams implements Resettable {
 
     private ConnectAs connectAs = ConnectAs.Client;
     private ConnectUsing connectUsing = ConnectUsing.Ipc;
@@ -44,4 +44,14 @@ public class TransportParams {
     public List<MessageListener> listeners() { return listeners; }
 
     public int instanceId() { return instanceId; }
+
+    @Override
+    public void reset() {
+        connectAs = ConnectAs.Client;
+        connectUsing = ConnectUsing.Ipc;
+        instanceId = -1;
+        for (int i = listeners.size() - 1; i > -1; i--) {
+            listeners.remove(i);
+        }
+    }
 }

@@ -16,7 +16,7 @@ public class AeronTransportClient implements TransportClient {
 
     private static final Log log = LogFactory.getLog(AeronTransportClient.class.getName());
 
-    AeronModule aeronModule;
+    AeronClient aeronClient;
     TransportParams params;
 
     private RecordingDescriptor latestRecording;
@@ -36,20 +36,20 @@ public class AeronTransportClient implements TransportClient {
             .endpoint(DYNAMIC_ENDPOINT)
             .build();
 
-    public AeronTransportClient(AeronModule aeronModule, TransportParams params) {
-        this.aeronModule = aeronModule;
+    public AeronTransportClient(AeronClient aeronClient, TransportParams params) {
+        this.aeronClient = aeronClient;
         this.params = params;
         this.fragmentHandler = new FragmentAssembler(new AeronClientFragmentHandler(params.listeners()));
     }
 
     @Override
     public boolean connectToJournalSource() {
-        return aeronModule.connectToArchive();
+        return aeronClient.connectToArchive();
     }
 
     @Override
     public boolean findJournal() {
-        latestRecording = aeronModule.findRecording();
+        latestRecording = aeronClient.findRecording();
         return latestRecording.recordingId() != Aeron.NULL_VALUE;
     }
 
@@ -78,7 +78,7 @@ public class AeronTransportClient implements TransportClient {
                             replayChannel,
                             udpReplayDestinationChannel,
                             liveDestination,
-                            aeronModule.aeronArchive()
+                            aeronClient.aeronArchive()
                     );
 
                     return true;
@@ -133,7 +133,7 @@ public class AeronTransportClient implements TransportClient {
                              String replayDestination,
                              String liveDestination,
                              AeronArchive aeronArchive) {
-        subscription = aeronModule.addSubscription(subscriptionChannel, EVENT_STREAM_ID);
+        subscription = aeronClient.addSubscription(subscriptionChannel, EVENT_STREAM_ID);
 
         return new ReplayMerge(
                 subscription,
@@ -148,6 +148,6 @@ public class AeronTransportClient implements TransportClient {
 
     @Override
     public void close() throws Exception {
-        aeronModule.closeSubscription(subscription);
+        aeronClient.closeSubscription(subscription);
     }
 }

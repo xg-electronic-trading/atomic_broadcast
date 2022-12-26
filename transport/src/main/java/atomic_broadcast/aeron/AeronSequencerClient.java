@@ -21,7 +21,7 @@ public class AeronSequencerClient implements SequencerClient {
 
     private static final int PUBLICATION_TAG = 2;
 
-    private final AeronModule aeronModule;
+    private final AeronClient aeronClient;
     private final TransportParams params;
     private RecordingDescriptor latestRecording;
     private Subscription subscription;
@@ -54,20 +54,20 @@ public class AeronSequencerClient implements SequencerClient {
             .endpoint(DYNAMIC_ENDPOINT)
             .build();
 
-    public AeronSequencerClient(AeronModule aeronModule, TransportParams params) {
-        this.aeronModule = aeronModule;
+    public AeronSequencerClient(AeronClient aeronClient, TransportParams params) {
+        this.aeronClient = aeronClient;
         this.params = params;
         this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(this, params.listeners()));
     }
 
     @Override
     public boolean connectToJournalSource() {
-        return aeronModule.connectToArchive();
+        return aeronClient.connectToArchive();
     }
 
     @Override
     public boolean findJournal() {
-        latestRecording = aeronModule.findRecording();
+        latestRecording = aeronClient.findRecording();
         return latestRecording.recordingId() != Aeron.NULL_VALUE;
     }
 
@@ -95,7 +95,7 @@ public class AeronSequencerClient implements SequencerClient {
                         replayChannel,
                         udpReplayDestinationChannel,
                         liveDestination,
-                        aeronModule.aeronArchive()
+                        aeronClient.aeronArchive()
                 );
 
                 return true;
@@ -131,7 +131,7 @@ public class AeronSequencerClient implements SequencerClient {
     @Override
     public boolean connectToCommandStream() {
         if (null == subscription) {
-            subscription = aeronModule.addSubscription(commandStreamSubscriptionChannel, COMMAND_STREAM_ID);
+            subscription = aeronClient.addSubscription(commandStreamSubscriptionChannel, COMMAND_STREAM_ID);
             return subscription != null;
         } else {
             return true;
@@ -146,19 +146,19 @@ public class AeronSequencerClient implements SequencerClient {
 
     @Override
     public boolean startReplication() {
-        return aeronModule.startReplication(params, latestRecording);
+        return aeronClient.startReplication(params, latestRecording);
     }
 
     @Override
     public boolean stopReplication() {
-        aeronModule.closeReplication();
+        aeronClient.closeReplication();
         return true;
     }
 
     @Override
     public boolean createEventStream() {
         if (null == publication) {
-            publication = aeronModule.addExclusivePublication(publicationChannel, EVENT_STREAM_ID);
+            publication = aeronClient.addExclusivePublication(publicationChannel, EVENT_STREAM_ID);
             return publication != null;
         } else {
             return true;
@@ -167,9 +167,9 @@ public class AeronSequencerClient implements SequencerClient {
 
     @Override
     public boolean createEventJournal() {
-        boolean isCreated = aeronModule.startRecording(publicationChannel, EVENT_STREAM_ID);
+        boolean isCreated = aeronClient.startRecording(publicationChannel, EVENT_STREAM_ID);
         if (isCreated) {
-            return aeronModule.pollForRecordingSignal(RecordingSignal.START);
+            return aeronClient.pollForRecordingSignal(RecordingSignal.START);
         } else {
             return false;
         }
@@ -220,7 +220,7 @@ public class AeronSequencerClient implements SequencerClient {
                                     String replayDestination,
                                     String liveDestination,
                                     AeronArchive aeronArchive) {
-        subscription = aeronModule.addSubscription(subscriptionChannel, EVENT_STREAM_ID);
+        subscription = aeronClient.addSubscription(subscriptionChannel, EVENT_STREAM_ID);
 
         return new ReplayMerge(
                 subscription,
@@ -256,9 +256,9 @@ public class AeronSequencerClient implements SequencerClient {
 
     @Override
     public void close() {
-        aeronModule.closeSubscription(subscription);
-        aeronModule.closeReplication();
-        aeronModule.closeRecording();
-        aeronModule.closePublication(publication);
+        aeronClient.closeSubscription(subscription);
+        aeronClient.closeReplication();
+        aeronClient.closeRecording();
+        aeronClient.closePublication(publication);
     }
 }
