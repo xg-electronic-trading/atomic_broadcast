@@ -20,13 +20,13 @@
                    id="688"
                    version="1"
                    semanticVersion="0.1"
-                   description="Sample SBE Messages"
-                   byteOrder="littleEndian">
+                   description="Sample SBE Messages">
     <types>
         <type name="seqNo" primitiveType="uint64"/>
         <type name="date" primitiveType="uint16"/>
         <type name="enumEncoding" primitiveType="char"/>
         <type name="idString" length="8" primitiveType="char"/>
+        <type name="mic" length="4" primitiveType="char"/>
         <type name="intEnumEncoding" primitiveType="uint8"/>
         <type name="currency" length="3" primitiveType="char" description="ISO 4217"/>
         <composite name="DATA">
@@ -108,38 +108,88 @@
             <validValue name="Stop">3</validValue>
             <validValue name="StopLimit">4</validValue>
         </enum>
+        <enum name="timeInForceEnum" encodingType="enumEncoding">
+            <validValue name="Day">0</validValue>
+            <validValue name="GTC">1</validValue>
+            <validValue name="OPG">2</validValue>
+            <validValue name="IOC">3</validValue>
+            <validValue name="FOK">4</validValue>
+            <validValue name="GTX">5</validValue>
+            <validValue name="GTD">6</validValue>
+            <validValue name="CLS">7</validValue>
+        </enum>
         <enum name="sideEnum" encodingType="enumEncoding">
             <validValue name="Buy">1</validValue>
             <validValue name="Sell">2</validValue>
         </enum>
+        <enum name="strategyEnum" encodingType="enumEncoding">
+            <validValue name="VWAP">0</validValue>
+            <validValue name="TWAP">1</validValue>
+            <validValue name="IS">2</validValue>
+            <validValue name="POV">3</validValue>
+            <validValue name="CLOSE">4</validValue>
+            <validValue name="LIQSEEK">5</validValue>
+            <validValue name="SPREADER">6</validValue>
+        </enum>
     </types>
 
     <sbe:message name="ExecutionReport" id="98" semanticType="8">
-        <field name="OrderID" id="37" type="idString" offset="0" semanticType="String"/>
-        <field name="ExecID" id="17" type="idString" offset="8" semanticType="String"/>
-        <field name="ExecType" id="150" type="execTypeEnum" offset="16" semanticType="char"/>
-        <field name="OrdStatus" id="39" type="ordStatusEnum" offset="17" semanticType="char"/>
-        <field name="Symbol" id="55" type="idString" offset="18" semanticType="String"/>
-        <field name="MaturityMonthYear" id="200" type="MONTH_YEAR" offset="26" semanticType="MonthYear"/>
-        <field name="Side" id="54" type="sideEnum" offset="31" semanticType="char"/>
-        <field name="LeavesQty" id="151" type="qtyEncoding" offset="32" semanticType="Qty"/>
-        <field name="CumQty" id="14" type="qtyEncoding" offset="36" semanticType="Qty"/>
-        <field name="TradeDate" id="75" type="date" offset="40" semanticType="LocalMktDate"/>
-        <group name="FillsGrp" id="2112" blockLength="12" dimensionType="groupSizeEncoding">
-            <field name="FillPx" id="1364" type="decimalEncoding" offset="0" semanticType="Price"/>
-            <field name="FillQty" id="1365" type="qtyEncoding" offset="8" semanticType="Qty"/>
+        <field name="Id" id="2" type="uint64"/>
+        <field name="OrderID" id="37" type="idString" semanticType="String"/>
+        <field name="ExecID" id="17" type="idString" semanticType="String"/>
+        <field name="ExecType" id="150" type="execTypeEnum" semanticType="char"/>
+        <field name="OrdStatus" id="39" type="ordStatusEnum" semanticType="char"/>
+        <field name="Symbol" id="55" type="idString" semanticType="String"/>
+        <field name="MaturityMonthYear" id="200" type="MONTH_YEAR" semanticType="MonthYear"/>
+        <field name="Side" id="54" type="sideEnum" semanticType="char"/>
+        <field name="LeavesQty" id="151" type="qtyEncoding" semanticType="Qty"/>
+        <field name="CumQty" id="14" type="qtyEncoding" semanticType="Qty"/>
+        <field name="TradeDate" id="75" type="date" semanticType="LocalMktDate"/>
+        <group name="FillsGrp" id="2112">
+            <field name="FillPx" id="1364" type="decimalEncoding" semanticType="Price"/>
+            <field name="FillQty" id="1365" type="qtyEncoding" semanticType="Qty"/>
         </group>
     </sbe:message>
     <sbe:message name="NewOrderSingle" id="99" semanticType="D">
-        <field name="ClOrdId" id="11" type="idString" offset="0" semanticType="String"/>
-        <field name="Account" id="1" type="idString" offset="8" semanticType="String"/>
-        <field name="Symbol" id="55" type="idString" offset="16" semanticType="String"/>
-        <field name="Side" id="54" type="sideEnum" offset="24" semanticType="char"/>
-        <field name="TransactTime" id="60" type="timestampEncoding" offset="25" semanticType="UTCTimestamp"/>
-        <field name="OrderQty" id="38" type="qtyEncoding" offset="33" semanticType="Qty"/>
-        <field name="OrdType" id="40" type="ordTypeEnum" offset="37" semanticType="char"/>
-        <field name="Price" id="44" type="decimalEncoding" offset="38" semanticType="Price" presence="optional"/>
-        <field name="StopPx" id="99" type="decimalEncoding" offset="46" semanticType="Price" presence="optional"/>
+        <field name="Id" id="2" type="uint64"/>
+        <field name="ParentId" id="3" type="uint64"/>
+        <field name="ClOrdId" id="11" type="idString"/>
+        <field name="Symbol" id="55" type="idString"/>
+        <field name="Side" id="54" type="sideEnum" semanticType="char"/>
+        <field name="TransactTime" id="60" type="timestampEncoding" semanticType="UTCTimestamp"/>
+        <field name="OrderQty" id="38" type="qtyEncoding" semanticType="Qty"/>
+        <field name="TimeInForce" id="59" type="timeInForceEnum" semanticType="char"/>
+        <field name="OrdType" id="40" type="ordTypeEnum" semanticType="char"/>
+        <field name="Price" id="44" type="decimalEncoding" semanticType="Price" presence="optional"/>
+        <field name="Strategy" id="4" type="strategyEnum" semanticType="char"/>
+        <field name="ExDest" id="100" type="mic" semanticType="char"/>
+        <field name="EffectiveTime" id="168" type="timestampEncoding" semanticType="UTCTimestamp"/>
+        <field name="ExpireTime" id="126" type="timestampEncoding" semanticType="UTCTimestamp"/>
+    </sbe:message>
+
+    <sbe:message name="OrderCancelReplaceRequest" id="100" semanticType="G">
+        <field name="Id" id="2" type="uint64"/>
+        <field name="ParentId" id="3" type="uint64"/>
+        <field name="ClOrdId" id="11" type="idString"/>
+        <field name="OrigClOrdId" id="41" type="idString"/>
+        <field name="Symbol" id="55" type="idString"/>
+        <field name="Side" id="54" type="sideEnum" semanticType="char"/>
+        <field name="TransactTime" id="60" type="timestampEncoding" semanticType="UTCTimestamp"/>
+        <field name="OrderQty" id="38" type="qtyEncoding" semanticType="Qty"/>
+        <field name="TimeInForce" id="59" type="timeInForceEnum" semanticType="char"/>
+        <field name="OrdType" id="40" type="ordTypeEnum" semanticType="char"/>
+        <field name="Price" id="44" type="decimalEncoding" semanticType="Price" presence="optional"/>
+        <field name="Strategy" id="4" type="strategyEnum" semanticType="char"/>
+        <field name="ExDest" id="100" type="mic" semanticType="char"/>
+        <field name="EffectiveTime" id="168" type="timestampEncoding" semanticType="UTCTimestamp"/>
+        <field name="ExpireTime" id="126" type="timestampEncoding" semanticType="UTCTimestamp"/>
+    </sbe:message>
+
+    <sbe:message name="OrderCancelRequest" id="101" semanticType="F">
+        <field name="Id" id="2" type="uint64"/>
+        <field name="ClOrdId" id="11" type="idString"/>
+        <field name="OrigClOrdId" id="41" type="idString"/>
+        <field name="TransactTime" id="60" type="timestampEncoding" semanticType="UTCTimestamp"/>
     </sbe:message>
 
     <sbe:message name="SeqNumSnapshot" id="1" description="snapshot of sequence numbers for components">

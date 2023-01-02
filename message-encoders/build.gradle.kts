@@ -15,6 +15,7 @@ dependencies {
     val sbeVersion = libs.sbe.all.get().versionConstraint.requiredVersion
     codecGeneration("uk.co.real-logic:sbe-tool:${sbeVersion}")
     implementation(libs.bundles.real.logic)
+    implementation(project(":zgc-utilities"))
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.6.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }

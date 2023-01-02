@@ -3,13 +3,13 @@ package container;
 import orderstate.StateCache;
 import subscriptions.MarketDataPoller;
 
-public class AlgoContainer implements Container {
+public class AlgoMainLoop implements Container {
 
 
     private final MarketDataPoller marketData;
     private final StateCache osCache;
 
-    public AlgoContainer(
+    public AlgoMainLoop(
             MarketDataPoller marketData,
             StateCache osCache) {
         this.marketData = marketData;
