@@ -22,7 +22,7 @@ public enum TransportState implements CodedEnum {
 
 
 
-    private int code;
+    private final int code;
 
     TransportState(int code) {
         this.code = code;

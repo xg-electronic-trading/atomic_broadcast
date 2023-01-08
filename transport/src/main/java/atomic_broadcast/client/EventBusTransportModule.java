@@ -1,8 +1,11 @@
 package atomic_broadcast.client;
 
 import atomic_broadcast.utils.Module;
+import atomic_broadcast.utils.ModuleName;
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
+
+import static atomic_broadcast.utils.ModuleName.ClientTransport;
 
 public class EventBusTransportModule implements Module {
 
@@ -16,6 +19,10 @@ public class EventBusTransportModule implements Module {
         this.params = params;
     }
 
+    @Override
+    public ModuleName name() {
+        return ClientTransport;
+    }
 
     @Override
     public void start() {

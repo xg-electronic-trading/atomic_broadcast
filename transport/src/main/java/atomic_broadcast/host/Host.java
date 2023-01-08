@@ -2,7 +2,6 @@ package atomic_broadcast.host;
 
 import atomic_broadcast.aeron.*;
 import atomic_broadcast.client.EventBusTransportModule;
-import atomic_broadcast.client.EventSubscriber;
 import atomic_broadcast.client.TransportClient;
 import atomic_broadcast.consensus.SeqNoClient;
 import atomic_broadcast.consensus.SeqNoProvider;
@@ -11,10 +10,13 @@ import atomic_broadcast.consensus.ShmSeqNoServer;
 import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.sequencer.SequencerModule;
 import atomic_broadcast.utils.CompositeModule;
+import atomic_broadcast.utils.Module;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import org.agrona.IoUtil;
+
+import java.util.List;
 
 public class Host {
 
@@ -81,6 +83,10 @@ public class Host {
         return modules;
     }
 
+    public List<Module> moduleList() {
+        return modules.getModules();
+    }
+
     public void close() {
         modules.close();
     }
@@ -92,7 +98,5 @@ public class Host {
     public EventBusTransportModule eventbus() {
         return eventbus;
     }
-
-
 
 }

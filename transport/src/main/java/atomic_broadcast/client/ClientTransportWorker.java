@@ -112,7 +112,7 @@ public class ClientTransportWorker implements TransportWorker {
         }
     }
 
-    private void setState(TransportState newState) {
+    private void  setState(TransportState newState) {
         if (this.state != newState) {
             state = newState;
             log.info().append("new state: ").appendLast(state);

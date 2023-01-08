@@ -4,7 +4,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static atomic_broadcast.utils.ModuleName.Composite;
+
 public class CompositeModule implements Module {
+
+    @Override
+    public ModuleName name() {
+        return Composite;
+    }
 
     private List<Module> modules = new ArrayList<>(20);
 
@@ -29,5 +36,7 @@ public class CompositeModule implements Module {
         }
     }
 
-
+    public List<Module> getModules() {
+        return modules;
+    }
 }

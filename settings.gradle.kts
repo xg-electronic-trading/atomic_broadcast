@@ -13,6 +13,7 @@ include("transport")
 include("algo-container")
 include("perf-benchmarks")
 include("zgc-utilities")
+include("integration-tests")
 
 
 dependencyResolutionManagement {

@@ -2,6 +2,7 @@ package atomic_broadcast.aeron;
 
 import atomic_broadcast.utils.ConnectAs;
 import atomic_broadcast.utils.Module;
+import atomic_broadcast.utils.ModuleName;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
@@ -17,6 +18,7 @@ import java.util.Comparator;
 import java.util.Optional;
 
 import static atomic_broadcast.aeron.AeronModule.CONTROL_RESPONSE_CHANNEL;
+import static atomic_broadcast.utils.ModuleName.AeronClient;
 
 public class AeronClient implements Module {
 
@@ -38,6 +40,10 @@ public class AeronClient implements Module {
     private final RecordingSignalConsumerImpl recordingSignalConsumer = new RecordingSignalConsumerImpl();
     private final RecordingDescriptor recordingDescriptor = new RecordingDescriptor();
 
+    @Override
+    public ModuleName name() {
+        return AeronClient;
+    }
 
     public AeronClient(AeronParams params) {
         this.params = params;

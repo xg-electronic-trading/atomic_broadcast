@@ -3,8 +3,11 @@ package atomic_broadcast.sequencer;
 import atomic_broadcast.client.TransportWorker;
 import atomic_broadcast.consensus.SeqNoProvider;
 import atomic_broadcast.utils.Module;
+import atomic_broadcast.utils.ModuleName;
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
+
+import static atomic_broadcast.utils.ModuleName.Sequencer;
 
 public class SequencerModule implements Module {
 
@@ -20,6 +23,11 @@ public class SequencerModule implements Module {
         this.params = params;
         this.transport = transport;
         this.seqNoProvider = seqNoProvider;
+    }
+
+    @Override
+    public ModuleName name() {
+        return Sequencer;
     }
 
     @Override

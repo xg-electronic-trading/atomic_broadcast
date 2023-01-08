@@ -1,6 +1,7 @@
 package atomic_broadcast.aeron;
 
 import atomic_broadcast.utils.Module;
+import atomic_broadcast.utils.ModuleName;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import io.aeron.Aeron;
@@ -13,6 +14,8 @@ import io.aeron.driver.ThreadingMode;
 import org.agrona.CloseHelper;
 import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.agrona.concurrent.NoOpIdleStrategy;
+
+import static atomic_broadcast.utils.ModuleName.AeronMediaDriver;
 
 public class AeronModule implements Module {
 
@@ -35,6 +38,10 @@ public class AeronModule implements Module {
         this.params = params;
     }
 
+    @Override
+    public ModuleName name() {
+        return AeronMediaDriver;
+    }
 
     @Override
     public void start() {

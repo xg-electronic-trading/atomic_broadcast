@@ -113,7 +113,7 @@ public class AeronTransportClient implements TransportClient {
                 replayMerge.poll(fragmentHandler, FRAGMENT_LIMIT);
                 return false;
             } else {
-                log.info().appendLast(replayMerge);
+                log.info().appendLast(replayMerge.toString());
                 replayMerge = null;
                 return true;
             }

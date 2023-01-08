@@ -11,6 +11,8 @@ import atomic_broadcast.utils.ConnectUsing;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
+import events.AlgoEventListener;
+import events.AlgoOrderEventHandler;
 import org.agrona.IoUtil;
 
 public class AlgoContainerMain {
@@ -22,11 +24,15 @@ public class AlgoContainerMain {
             String aeronDir = IoUtil.tmpDirName()+"/"+"aeron";
             log.info().append("using aeron dir: ").appendLast(aeronDir);
 
+            AlgoOrderEventHandler eventHandler = new AlgoOrderEventHandler();
+            AlgoEventListener eventListener = new AlgoEventListener(eventHandler);
+
             CompositeModule modules = new CompositeModule();
             TransportParams clientParams = new TransportParams();
             clientParams
                     .connectAs(ConnectAs.Client)
-                    .connectUsing(ConnectUsing.Unicast);
+                    .connectUsing(ConnectUsing.Unicast)
+                    .addListener(eventListener);
 
             AeronParams params = new AeronParams()
                     .commandPort(40001)
