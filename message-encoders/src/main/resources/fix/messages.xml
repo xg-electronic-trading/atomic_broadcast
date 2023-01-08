@@ -162,7 +162,7 @@
         <field name="OrdType" id="40" type="ordTypeEnum" semanticType="char"/>
         <field name="Price" id="44" type="decimalEncoding" semanticType="Price" presence="optional"/>
         <field name="Strategy" id="4" type="strategyEnum" semanticType="char"/>
-        <field name="ExDest" id="100" type="mic" semanticType="char"/>
+        <field name="ExDest" id="100" type="uint32"/>
         <field name="EffectiveTime" id="168" type="timestampEncoding" semanticType="UTCTimestamp"/>
         <field name="ExpireTime" id="126" type="timestampEncoding" semanticType="UTCTimestamp"/>
     </sbe:message>

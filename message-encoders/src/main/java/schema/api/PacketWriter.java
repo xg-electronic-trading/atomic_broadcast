@@ -1,7 +1,7 @@
 package schema.api;
 
 import com.messages.sbe.MessageHeaderEncoder;
-import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageFlyweight;
 
@@ -21,7 +21,11 @@ public class PacketWriter {
         return headerEncoder.encodedLength();
     }
 
-    public DirectBuffer buffer() {
+    public MutableDirectBuffer buffer() {
         return buffer;
+    }
+
+    public void reset(int length) {
+        buffer.setMemory(0, length, (byte) 0);
     }
 }
