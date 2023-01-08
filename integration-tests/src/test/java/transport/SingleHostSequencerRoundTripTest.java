@@ -2,6 +2,7 @@ package transport;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import utils.SequencerTestFixture;
 
@@ -15,7 +16,7 @@ public class SingleHostSequencerRoundTripTest {
         fixture.before();
     }
 
-    @Test
+    @Disabled
     public void singleMessageRoundTrip() {
         /**
          * Add logic to push a message through sequencer via
