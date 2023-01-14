@@ -3,7 +3,7 @@ package command;
 import com.messages.sbe.*;
 import schema.api.PacketWriter;
 
-public class NewOrderSingleCommandImpl implements NewOrderSingleCommand {
+public class NewOrderSingleCommandImpl implements NewOrderSingleCommand, Command {
 
     private final NewOrderSingleEncoder encoder = new NewOrderSingleEncoder();
     private final PacketWriter packet;
@@ -20,7 +20,7 @@ public class NewOrderSingleCommandImpl implements NewOrderSingleCommand {
 
     @Override
     public NewOrderSingleCommand price(long price) {
-        encoder.price();
+        encoder.price().mantissa(price);
         return this;
     }
 
@@ -62,7 +62,7 @@ public class NewOrderSingleCommandImpl implements NewOrderSingleCommand {
 
     @Override
     public NewOrderSingleCommand exDest(int exDest) {
-        //encoder.exDest(exDest);
+        encoder.exDest(exDest);
         return this;
     }
 

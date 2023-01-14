@@ -40,7 +40,7 @@ public class PacketReader implements Packet {
 
     @Override
     public int offset() {
-        return headerDecoder.offset();
+        return headerDecoder.encodedLength();
     }
 
     public DirectBuffer buffer() {

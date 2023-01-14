@@ -5,7 +5,7 @@ import com.messages.sbe.SideEnum;
 import com.messages.sbe.StrategyEnum;
 import com.messages.sbe.TimeInForceEnum;
 
-public interface NewOrderSingleCommand extends Command {
+public interface NewOrderSingleCommand {
 
     NewOrderSingleCommand parentId(long id);
 

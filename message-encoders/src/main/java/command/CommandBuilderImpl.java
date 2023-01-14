@@ -4,12 +4,13 @@ import com.messages.sbe.OrdTypeEnum;
 import com.messages.sbe.SideEnum;
 import com.messages.sbe.StrategyEnum;
 import com.messages.sbe.TimeInForceEnum;
+import org.agrona.DirectBuffer;
 import schema.api.PacketWriter;
 
 public class CommandBuilderImpl implements CommandBuilder {
 
     private final PacketWriter packet = new PacketWriter();
-    private final NewOrderSingleCommand newOrderSingle = new NewOrderSingleCommandImpl(packet);
+    private final NewOrderSingleCommandImpl newOrderSingle = new NewOrderSingleCommandImpl(packet);
 
     @Override
     public NewOrderSingleCommand createNewOrderSingle() {
@@ -30,4 +31,11 @@ public class CommandBuilderImpl implements CommandBuilder {
 
         return newOrderSingle;
     }
+
+    @Override
+    public DirectBuffer buffer() {
+        return packet.buffer();
+    }
+
+
 }
