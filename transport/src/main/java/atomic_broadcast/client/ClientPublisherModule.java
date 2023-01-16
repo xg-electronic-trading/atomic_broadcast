@@ -5,30 +5,30 @@ import atomic_broadcast.utils.ModuleName;
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
 
-import static atomic_broadcast.utils.ModuleName.ClientTransport;
+import static atomic_broadcast.utils.ModuleName.ClientPublisher;
 
-public class EventBusTransportModule implements Module {
+public class ClientPublisherModule implements Module {
 
-    private final TransportClient transportClient;
+    private final CommandPublisher commandPublisher;
     private final TransportParams params;
 
     private TransportWorker transportSession;
 
-    public EventBusTransportModule(TransportClient transportClient, TransportParams params) {
-        this.transportClient = transportClient;
+    public ClientPublisherModule(CommandPublisher commandPublisher, TransportParams params) {
+        this.commandPublisher = commandPublisher;
         this.params = params;
     }
 
     @Override
     public ModuleName name() {
-        return ClientTransport;
+        return ClientPublisher;
     }
 
     @Override
     public void start() {
         switch (params.connectAs()) {
             case Client:
-                transportSession = new ClientTransportWorker(params, transportClient);
+                transportSession = new ClientPublicationWorker(params, commandPublisher);
                 break;
 
             default:
@@ -49,4 +49,6 @@ public class EventBusTransportModule implements Module {
     }
 
     public TransportState state() { return transportSession.state(); }
+
+    public CommandPublisher cmdPublisher() { return commandPublisher; }
 }

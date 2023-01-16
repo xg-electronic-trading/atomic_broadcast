@@ -4,6 +4,7 @@ import atomic_broadcast.sequencer.SequencerCommandHandler;
 import atomic_broadcast.utils.ConnectAs;
 import atomic_broadcast.utils.ConnectUsing;
 import atomic_broadcast.utils.TransportParams;
+import listener.EventPrinter;
 
 public class TestTransportParams {
 

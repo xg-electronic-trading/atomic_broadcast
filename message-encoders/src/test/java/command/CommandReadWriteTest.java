@@ -16,8 +16,8 @@ public class CommandReadWriteTest {
         PacketReader packetReader = new PacketReader();
         CommandBuilder cmdBuilder = new CommandBuilderImpl();
 
-        cmdBuilder.createNewOrderSingle()
-                .parentId(1234)
+        NewOrderSingleCommandImpl cmd = cmdBuilder.createNewOrderSingle();
+        cmd.parentId(1234)
                 .symbol("VOD.L")
                 .side(SideEnum.Buy)
                 .transactTime(1_000)
@@ -30,11 +30,12 @@ public class CommandReadWriteTest {
                 .startTime(1_000)
                 .endTime(1_001);
 
-        packetReader.wrap(cmdBuilder.buffer(), 0);
+        packetReader.wrap(cmdBuilder.buffer(), 0, packetReader.offset() + cmd.encodedLength());
         NewOrderSingleImpl nosEvent = new NewOrderSingleImpl();
 
         nosEvent.init(packetReader);
 
+        Assertions.assertEquals(0, nosEvent.id());
         Assertions.assertEquals(1234, nosEvent.parentId());
         Assertions.assertEquals("VOD.L", nosEvent.symbol());
         Assertions.assertEquals(SideEnum.Buy, nosEvent.side());

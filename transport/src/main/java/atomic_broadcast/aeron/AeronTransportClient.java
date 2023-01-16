@@ -7,12 +7,9 @@ import com.epam.deltix.gflog.api.LogFactory;
 import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.ReplayMerge;
-import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.FragmentHandler;
-import org.agrona.DirectBuffer;
 
 import static atomic_broadcast.aeron.AeronModule.*;
-import static io.aeron.Publication.*;
 import static io.aeron.archive.client.RecordingSignalPoller.FRAGMENT_LIMIT;
 
 public class AeronTransportClient implements TransportClient {
@@ -23,17 +20,9 @@ public class AeronTransportClient implements TransportClient {
     TransportParams params;
 
     private RecordingDescriptor latestRecording;
-    private Publication publication;
     private Subscription subscription;
     private ReplayMerge replayMerge;
     private FragmentHandler fragmentHandler;
-
-    private final BufferClaim bufferClaim = new BufferClaim();
-
-    private final String commandStreamPublicationChannel = new ChannelUriStringBuilder()
-            .media(CommonContext.UDP_MEDIA)
-            .endpoint(COMMAND_ENDPOINT)
-            .build();
 
     ChannelUriStringBuilder udpSubscriptionChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
@@ -159,78 +148,7 @@ public class AeronTransportClient implements TransportClient {
 
     @Override
     public void close() throws Exception {
-        aeronClient.closePublication(publication);
         aeronClient.closeSubscription(subscription);
-        publication = null;
         subscription = null;
-    }
-
-    @Override
-    public boolean connectToCommandStream() {
-        if (null == publication) {
-            publication = aeronClient.addPublication(commandStreamPublicationChannel, COMMAND_STREAM_ID);
-            return null != publication;
-        } else {
-            return true;
-        }
-    }
-
-    @Override
-    public boolean isPublicationConnected() {
-        return publication.isConnected();
-    }
-
-    @Override
-    public boolean isPublicationClosed() {
-        return publication.isClosed();
-    }
-
-    @Override
-    public boolean send(DirectBuffer buffer, int offset, int length) {
-        if (null != publication) {
-            if (length > publication.maxPayloadLength()) {
-                /**
-                 * send messages > MTU using standard offer().
-                 * these will be fragmented over the wire.
-                 */
-                long result = publication.offer(buffer, offset, length);
-                return processResult(result);
-            } else {
-                /**
-                 * send messages <= MTU via tryClaim() using
-                 * zero copy semantics for increased performance.
-                 */
-                long result = publication.tryClaim(length, bufferClaim);
-                if (result > 0) {
-                    bufferClaim.commit();
-                } else {
-                    bufferClaim.abort();
-                }
-                return processResult(result);
-            }
-        } else {
-            return false;
-        }
-    }
-
-    private boolean processResult(long publicationResult) {
-        if (publicationResult == NOT_CONNECTED) {
-            log.error().appendLast("publication not connected.");
-            return false;
-        } else if (publicationResult == BACK_PRESSURED) {
-            log.error().appendLast("publication back pressured. please retry offer.");
-            return false;
-        } else if (publicationResult == ADMIN_ACTION) {
-            log.error().appendLast("publication admin action. please retry offer.");
-            return false;
-        } else if (publicationResult == CLOSED) {
-            log.error().appendLast("publication closed. cannot offer.");
-            return false;
-        } else if (publicationResult == MAX_POSITION_EXCEEDED) {
-            log.error().appendLast("max position exceeded. publication should be closed and then a new one added.");
-            return false;
-        }
-
-        return true;
     }
 }

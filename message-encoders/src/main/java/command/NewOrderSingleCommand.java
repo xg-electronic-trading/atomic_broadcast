@@ -7,6 +7,8 @@ import com.messages.sbe.TimeInForceEnum;
 
 public interface NewOrderSingleCommand {
 
+    NewOrderSingleCommand id(long id);
+
     NewOrderSingleCommand parentId(long id);
 
     NewOrderSingleCommand price(long price);

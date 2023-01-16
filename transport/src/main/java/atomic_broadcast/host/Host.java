@@ -1,7 +1,9 @@
 package atomic_broadcast.host;
 
 import atomic_broadcast.aeron.*;
-import atomic_broadcast.client.EventBusTransportModule;
+import atomic_broadcast.client.ClientPublisherModule;
+import atomic_broadcast.client.CommandPublisher;
+import atomic_broadcast.client.EventBusSubscriberModule;
 import atomic_broadcast.client.TransportClient;
 import atomic_broadcast.consensus.SeqNoClient;
 import atomic_broadcast.consensus.SeqNoProvider;
@@ -26,7 +28,8 @@ public class Host {
     private CompositeModule modules;
     private AeronModule mediaDriver;
     private SequencerModule sequencer;
-    private EventBusTransportModule eventbus;
+    private EventBusSubscriberModule eventbus;
+    private ClientPublisherModule publisher;
     private final AeronParams params;
 
     public Host(String alias) {
@@ -69,9 +72,12 @@ public class Host {
     public Host deployClient(TransportParams transportParams) {
         AeronClient aeronClient = new AeronClient(params);
         TransportClient transportClient = new AeronTransportClient(aeronClient, transportParams);
-        eventbus = new EventBusTransportModule(transportClient, transportParams);
+        CommandPublisher cmdPublisher = new AeronPublisherClient(aeronClient);
+        eventbus = new EventBusSubscriberModule(transportClient, transportParams);
+        publisher = new ClientPublisherModule(cmdPublisher, transportParams);
         modules.add(aeronClient);
         modules.add(eventbus);
+        modules.add(publisher);
         return this;
     }
 
@@ -95,8 +101,10 @@ public class Host {
         return sequencer;
     }
 
-    public EventBusTransportModule eventbus() {
+    public EventBusSubscriberModule eventbus() {
         return eventbus;
     }
+
+    public ClientPublisherModule publisher() { return publisher; }
 
 }

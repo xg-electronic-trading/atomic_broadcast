@@ -1,15 +1,22 @@
 package command;
 
 import com.messages.sbe.*;
+import schema.api.CommandImpl;
 import schema.api.PacketWriter;
 
-public class NewOrderSingleCommandImpl implements NewOrderSingleCommand, Command {
+public class NewOrderSingleCommandImpl extends CommandImpl implements NewOrderSingleCommand {
 
     private final NewOrderSingleEncoder encoder = new NewOrderSingleEncoder();
-    private final PacketWriter packet;
 
     public NewOrderSingleCommandImpl(PacketWriter packet) {
-        this.packet = packet;
+        super(packet);
+        setEncoder(encoder);
+    }
+
+    @Override
+    public NewOrderSingleCommand id(long id) {
+        encoder.id(id);
+        return this;
     }
 
     @Override
@@ -82,16 +89,5 @@ public class NewOrderSingleCommandImpl implements NewOrderSingleCommand, Command
     public NewOrderSingleCommand transactTime(long time) {
         encoder.transactTime().time(time);
         return this;
-    }
-
-    @Override
-    public void beginWrite() {
-        int headerLength = packet.encodeHeader(encoder);
-        encoder.wrap(packet.buffer(), headerLength);
-    }
-
-    @Override
-    public void endWrite() {
-        packet.reset(encoder.encodedLength());
     }
 }

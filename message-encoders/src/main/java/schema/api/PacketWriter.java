@@ -1,18 +1,14 @@
 package schema.api;
 
-import com.messages.sbe.MessageHeaderEncoder;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.sbe.MessageFlyweight;
 
-import java.nio.ByteBuffer;
-
-public class PacketWriter {
-    MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
-    private final UnsafeBuffer buffer = new UnsafeBuffer(ByteBuffer.allocateDirect(2 * 1024 * 1024));
+public class PacketWriter extends PacketImpl {
 
     public int encodeHeader(MessageFlyweight messageFlyweight) {
-        headerEncoder.wrap(buffer, 0);
+        headerEncoder.wrap(mutableBuffer, 0);
+        headerDecoder.wrap(mutableBuffer, 0);
+
         headerEncoder.blockLength(messageFlyweight.sbeBlockLength());
         headerEncoder.templateId(messageFlyweight.sbeTemplateId());
         headerEncoder.schemaId(messageFlyweight.sbeSchemaId());
@@ -22,10 +18,10 @@ public class PacketWriter {
     }
 
     public MutableDirectBuffer buffer() {
-        return buffer;
+        return mutableBuffer;
     }
 
     public void reset(int length) {
-        buffer.setMemory(0, length, (byte) 0);
+        mutableBuffer.setMemory(0, length, (byte) 0);
     }
 }

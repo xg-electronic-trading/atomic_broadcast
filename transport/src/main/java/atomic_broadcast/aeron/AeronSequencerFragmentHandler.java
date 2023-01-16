@@ -25,13 +25,13 @@ public class AeronSequencerFragmentHandler implements FragmentHandler {
     @Override
     public void onFragment(DirectBuffer buffer, int offset, int length, Header header) {
         long seqNo = seqNoHolder.incrementAndGet();
-        packet.wrap(buffer, offset);
+        packet.wrap(buffer, offset, length);
         packet.encodeSeqNo(seqNo);
         for (int i = 0; i < listeners.size(); i++) {
             listeners.get(i).onMessage(packet, false);
         }
 
-        sequencerClient.publish(packet.buffer(), offset, length);
+        sequencerClient.publish(packet.buffer(), 0, length);
     }
 
     public long seqNo() {

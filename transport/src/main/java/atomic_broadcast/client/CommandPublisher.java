@@ -2,7 +2,7 @@ package atomic_broadcast.client;
 
 import org.agrona.DirectBuffer;
 
-public interface CommandPublisher {
+public interface CommandPublisher extends AutoCloseable {
     boolean connectToCommandStream();
     boolean isPublicationConnected();
     boolean isPublicationClosed();

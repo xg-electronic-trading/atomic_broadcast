@@ -22,7 +22,7 @@ public class AeronClientFragmentHandler implements FragmentHandler {
 
     @Override
     public void onFragment(DirectBuffer buffer, int offset, int length, Header header) {
-        packet.wrap(buffer, offset);
+        packet.wrap(buffer, offset, length);
         long incomingSeqNo = packet.seqNo();
         long currentSeqNo = seqNoHolder.get();
 

@@ -3,7 +3,7 @@ package container;
 import atomic_broadcast.aeron.AeronClient;
 import atomic_broadcast.aeron.AeronParams;
 import atomic_broadcast.aeron.AeronTransportClient;
-import atomic_broadcast.client.EventBusTransportModule;
+import atomic_broadcast.client.EventBusSubscriberModule;
 import atomic_broadcast.client.TransportClient;
 import atomic_broadcast.utils.CompositeModule;
 import atomic_broadcast.utils.ConnectAs;
@@ -43,7 +43,7 @@ public class AlgoContainerMain {
 
             AeronClient aeronClient = new AeronClient(params);
             TransportClient transportClient = new AeronTransportClient(aeronClient, clientParams);
-            EventBusTransportModule eventbus = new EventBusTransportModule(transportClient, clientParams);
+            EventBusSubscriberModule eventbus = new EventBusSubscriberModule(transportClient, clientParams);
             modules.add(aeronClient);
             modules.add(eventbus);
 

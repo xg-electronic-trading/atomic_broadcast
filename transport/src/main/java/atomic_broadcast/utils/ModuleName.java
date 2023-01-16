@@ -5,7 +5,8 @@ public enum ModuleName implements CodedEnum {
     ClientTransport(1),
     AeronMediaDriver(2),
     AeronClient(3),
-    Composite(4);
+    Composite(4),
+    ClientPublisher(5);
 
 
     private final int code;

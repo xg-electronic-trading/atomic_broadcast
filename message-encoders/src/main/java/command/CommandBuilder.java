@@ -4,7 +4,7 @@ import org.agrona.DirectBuffer;
 
 public interface CommandBuilder {
 
-    NewOrderSingleCommand createNewOrderSingle();
+    NewOrderSingleCommandImpl createNewOrderSingle();
 
     DirectBuffer buffer();
 }

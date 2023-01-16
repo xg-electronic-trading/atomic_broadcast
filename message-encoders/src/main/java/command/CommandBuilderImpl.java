@@ -13,7 +13,7 @@ public class CommandBuilderImpl implements CommandBuilder {
     private final NewOrderSingleCommandImpl newOrderSingle = new NewOrderSingleCommandImpl(packet);
 
     @Override
-    public NewOrderSingleCommand createNewOrderSingle() {
+    public NewOrderSingleCommandImpl createNewOrderSingle() {
         newOrderSingle.beginWrite();
         newOrderSingle
                 .parentId(0)

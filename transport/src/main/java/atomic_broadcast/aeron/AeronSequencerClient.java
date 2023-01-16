@@ -203,6 +203,7 @@ public class AeronSequencerClient implements SequencerClient {
                  */
                 long result = publication.tryClaim(length, bufferClaim);
                 if (result > 0) {
+                    bufferClaim.putBytes(buffer, offset, length);
                     bufferClaim.commit();
                 } else {
                     bufferClaim.abort();
