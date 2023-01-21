@@ -27,7 +27,7 @@ public class SingleHostSequencerRoundTripTest {
         fixture.before();
     }
 
-    @Disabled
+    @Test
     public void singleMessageRoundTrip() {
         /**
          * Add logic to push a message through sequencer via
