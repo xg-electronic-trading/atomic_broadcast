@@ -12,7 +12,7 @@ import io.aeron.archive.client.AeronArchive;
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.ThreadingMode;
 import org.agrona.CloseHelper;
-import org.agrona.concurrent.BusySpinIdleStrategy;
+import org.agrona.concurrent.BusySpinIdleStrategy;;
 import org.agrona.concurrent.NoOpIdleStrategy;
 
 import static atomic_broadcast.utils.ModuleName.AeronMediaDriver;
@@ -50,10 +50,14 @@ public class AeronModule implements Module {
         archiveCtx.recordingEventsEnabled(false)
                 .controlChannel(LOCAL_ENDPOINT+params.archiveRequestPort())
                 .archiveClientContext(new AeronArchive.Context().controlResponseChannel(CONTROL_RESPONSE_CHANNEL))
-                .replicationChannel(REPLICATION_CHANNEL);
+                .replicationChannel(REPLICATION_CHANNEL)
+                .epochClock(params.clock())
+                .nanoClock(params.clock());
 
         ctx.termBufferSparseFile(false)
-                .spiesSimulateConnection(true);
+                .spiesSimulateConnection(true)
+                .epochClock(params.clock())
+                .nanoClock(params.clock());
 
         ctx.aeronDirectoryName(params.aeronDir());
         archiveCtx.aeronDirectoryName(ctx.aeronDirectoryName());

@@ -1,13 +1,12 @@
 package time;
 
-import org.agrona.concurrent.EpochClock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.TimeUnit;
 
-public class SimulatedClock implements EpochClock {
+public class SimulatedClock implements Clock {
 
     private final String DEFAULT_START_TIME = "2022-01-01 08:00:00";
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -24,8 +23,9 @@ public class SimulatedClock implements EpochClock {
        currentTime = zdt.toInstant().toEpochMilli();
    }
 
-   public void advance() {
-       currentTime += 1;
+   public long advance() {
+       currentTime += 10;
+       return currentTime;
    }
 
    public void advanceSeconds(long seconds) {
@@ -34,6 +34,11 @@ public class SimulatedClock implements EpochClock {
 
     @Override
     public long time() {
-        return currentTime;
+        return advance();
+    }
+
+    @Override
+    public long nanoTime() {
+        return time() * 1_000_000L;
     }
 }

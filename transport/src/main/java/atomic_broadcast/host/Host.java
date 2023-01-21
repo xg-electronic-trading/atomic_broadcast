@@ -17,7 +17,8 @@ import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import org.agrona.IoUtil;
-
+import time.Clock;
+import time.RealClock;
 import java.util.List;
 
 public class Host {
@@ -31,19 +32,22 @@ public class Host {
     private EventBusSubscriberModule eventbus;
     private ClientPublisherModule publisher;
     private final AeronParams params;
+    private final Clock clock;
 
     public Host(String alias) {
         String aeronDir = IoUtil.tmpDirName()+"/"+alias+"/"+"aeron";
         log.info().append("using aeron dir: ").appendLast(aeronDir);
 
         this.alias = alias;
+        this.clock = new RealClock();
         this.modules = new CompositeModule();
         this.params = new AeronParams()
                 .commandPort(40001)
                 .eventPort(40002)
                 .archivePort(8010)
                 .aeronDir(aeronDir)
-                .lowLatencyMode(false);
+                .lowLatencyMode(false)
+                .clock(clock);
     }
 
     public Host deployShmSeqNoServer() {

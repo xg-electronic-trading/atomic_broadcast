@@ -1,6 +1,7 @@
 package atomic_broadcast.aeron;
 
 import atomic_broadcast.utils.Resettable;
+import time.Clock;
 
 public class AeronParams implements Resettable {
     private int commandPort = -1;
@@ -8,6 +9,7 @@ public class AeronParams implements Resettable {
     private int archiveRequestPort = -1;
     private boolean lowLatencyMode = false;
     private String aeronDir = "";
+    private Clock clock = null;
 
     public AeronParams() {
         reset();
@@ -20,6 +22,7 @@ public class AeronParams implements Resettable {
         archiveRequestPort = -1;
         lowLatencyMode = false;
         aeronDir = "";
+        clock = null;
     }
 
     public AeronParams commandPort(int port) {
@@ -47,6 +50,11 @@ public class AeronParams implements Resettable {
         return this;
     }
 
+    public AeronParams clock(Clock clock) {
+        this.clock = clock;
+        return this;
+    }
+
     public int eventPort() {
         return eventPort;
     }
@@ -66,4 +74,6 @@ public class AeronParams implements Resettable {
     public String aeronDir() {
         return aeronDir;
     }
+
+    public Clock clock() { return clock; }
 }

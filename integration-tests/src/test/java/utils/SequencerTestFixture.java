@@ -8,6 +8,7 @@ import atomic_broadcast.listener.MessageListener;
 import atomic_broadcast.sequencer.SequencerModule;
 import atomic_broadcast.utils.*;
 import atomic_broadcast.utils.Module;
+import io.aeron.CommonContext;
 import listener.EventPrinter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +24,8 @@ public class SequencerTestFixture {
 
     @BeforeEach
     public void before() {
+        System.setProperty(CommonContext.DEBUG_TIMEOUT_PROP_NAME, "300s");
+
         hostA = new Host("hostA");
 
         TransportParams clientParams = TestTransportParams.createClientParams();
