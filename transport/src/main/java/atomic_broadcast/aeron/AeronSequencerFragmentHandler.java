@@ -28,7 +28,7 @@ public class AeronSequencerFragmentHandler implements FragmentHandler {
         packet.wrap(buffer, offset, length);
         packet.encodeSeqNo(seqNo);
         for (int i = 0; i < listeners.size(); i++) {
-            listeners.get(i).onMessage(packet, false);
+            listeners.get(i).onMessage(packet);
         }
 
         sequencerClient.publish(packet.buffer(), 0, length);

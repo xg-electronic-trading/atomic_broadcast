@@ -37,8 +37,9 @@ public class AeronClientFragmentHandler implements FragmentHandler {
              *  2. check if seq no. less than highwatermark to determine if is a replay message.
              *  3. update highwatermark
              */
+            packet.encodeIsReplay(0);
             for (int i = 0; i < listeners.size(); i++) {
-                listeners.get(i).onMessage(packet, false);
+                listeners.get(i).onMessage(packet);
             }
         } else {
             /**

@@ -5,7 +5,7 @@ import schema.api.Packet;
 
 public class SequencerCommandHandler implements MessageListener {
     @Override
-    public void onMessage(Packet packet, boolean isReplay) {
+    public void onMessage(Packet packet) {
 
     }
 }

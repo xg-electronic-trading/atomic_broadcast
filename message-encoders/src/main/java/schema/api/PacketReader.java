@@ -14,4 +14,9 @@ public class PacketReader extends PacketImpl {
         headerEncoder.seqNo(seqNo);
     }
 
+    public void encodeIsReplay(int isReplay) { headerEncoder.isReplay((short) isReplay); }
+
+    public boolean isReplay() {
+        return headerDecoder.isReplay() == 1;
+    }
 }

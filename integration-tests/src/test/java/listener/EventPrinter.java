@@ -17,7 +17,7 @@ public class EventPrinter implements MessageListener {
     NewOrderSingleDecoder nosDecoder = new NewOrderSingleDecoder();
 
     @Override
-    public void onMessage(Packet packet, boolean isReplay) {
+    public void onMessage(Packet packet) {
         switch (packet.messageType()) {
             case NewOrderSingle:
                 nosDecoder.wrap(packet.buffer(), packet.offset(), packet.fixedMessageLength(), packet.version());

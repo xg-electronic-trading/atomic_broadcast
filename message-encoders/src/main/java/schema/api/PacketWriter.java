@@ -14,7 +14,13 @@ public class PacketWriter extends PacketImpl {
         headerEncoder.schemaId(messageFlyweight.sbeSchemaId());
         headerEncoder.version(messageFlyweight.sbeSchemaVersion());
         headerEncoder.seqNo(0);
+        headerEncoder.isReplay((short) 0);
         return headerEncoder.encodedLength();
+    }
+
+    @Override
+    public boolean isReplay() {
+        return false;
     }
 
     public MutableDirectBuffer buffer() {

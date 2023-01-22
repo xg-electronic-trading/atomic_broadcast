@@ -21,7 +21,7 @@ public class AlgoEventListener implements MessageListener {
     }
 
     @Override
-    public void onMessage(Packet packet, boolean isReplay) {
+    public void onMessage(Packet packet) {
         switch (packet.messageType()) {
             case NewOrderSingle:
                 newOrder.init(packet);

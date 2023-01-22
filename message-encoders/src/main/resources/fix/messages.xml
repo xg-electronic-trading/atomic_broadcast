@@ -45,6 +45,7 @@
             <type name="schemaId" primitiveType="uint16"/>
             <type name="version" primitiveType="uint16"/>
             <type name="seqNo" primitiveType="uint64"/>
+            <type name="isReplay" primitiveType="uint8"/>
         </composite>
         <composite name="decimalEncoding">
             <type name="mantissa" presence="optional" primitiveType="int64"/>
