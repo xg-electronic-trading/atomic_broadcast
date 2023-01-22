@@ -13,12 +13,15 @@ import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.sequencer.SequencerModule;
 import atomic_broadcast.utils.CompositeModule;
 import atomic_broadcast.utils.Module;
+import atomic_broadcast.utils.Pollable;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import org.agrona.IoUtil;
 import time.Clock;
 import time.RealClock;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public class Host {
@@ -27,6 +30,7 @@ public class Host {
 
     private String alias;
     private CompositeModule modules;
+    private List<Pollable> pollables;
     private AeronModule mediaDriver;
     private SequencerModule sequencer;
     private EventBusSubscriberModule eventbus;
@@ -39,6 +43,7 @@ public class Host {
         log.info().append("using aeron dir: ").appendLast(aeronDir);
 
         this.alias = alias;
+        this.pollables = new ArrayList<>(20);
         this.clock = new RealClock();
         this.modules = new CompositeModule();
         this.params = new AeronParams()
@@ -68,6 +73,7 @@ public class Host {
         SequencerClient sequencerClient = new AeronSequencerClient(aeronClient, transportParams);
         SeqNoProvider seqNoProvider = new SeqNoClient(new ShmSeqNoClient());
         sequencer = new SequencerModule(transportParams, sequencerClient, seqNoProvider);
+        pollables.add(sequencer.transport());
         modules.add(aeronClient);
         modules.add(sequencer);
         return this;
@@ -79,6 +85,8 @@ public class Host {
         CommandPublisher cmdPublisher = new AeronPublisherClient(aeronClient);
         eventbus = new EventBusSubscriberModule(transportClient, transportParams);
         publisher = new ClientPublisherModule(cmdPublisher, transportParams);
+        pollables.add(eventbus.transport());
+        pollables.add(publisher.transport());
         modules.add(aeronClient);
         modules.add(eventbus);
         modules.add(publisher);
@@ -95,6 +103,10 @@ public class Host {
 
     public List<Module> moduleList() {
         return modules.getModules();
+    }
+
+    public List<Pollable> pollables() {
+        return pollables;
     }
 
     public void close() {

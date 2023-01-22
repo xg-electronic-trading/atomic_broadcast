@@ -7,6 +7,7 @@ import atomic_broadcast.host.Host;
 import atomic_broadcast.sequencer.*;
 import atomic_broadcast.utils.ConnectAs;
 import atomic_broadcast.utils.ConnectUsing;
+import atomic_broadcast.utils.Pollable;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
@@ -41,11 +42,11 @@ public class AllAppsMain {
                     .start();
 
             while (host.sequencer().state() != PollCommandStream) {
-                host.modules().poll();
+                host.pollables().forEach(Pollable::poll);
             }
 
             while(host.eventbus().state() != PollEventStream) {
-                host.modules().poll();
+                host.pollables().forEach(Pollable::poll);
             }
 
             host.modules().close();

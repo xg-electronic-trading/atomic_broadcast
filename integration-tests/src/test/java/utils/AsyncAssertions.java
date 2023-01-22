@@ -1,8 +1,10 @@
 package utils;
 
 import atomic_broadcast.utils.CompositeModule;
+import atomic_broadcast.utils.Pollable;
 import atomic_broadcast.utils.TransportState;
 
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
@@ -12,7 +14,7 @@ public class AsyncAssertions {
     private static final long AssertionTimeOutMs = 10_000L;
 
     public static void pollUntil(
-            CompositeModule modules,
+            List<Pollable> pollables,
             TransportState expected,
             Supplier<TransportState> actual
     ) {
@@ -23,7 +25,7 @@ public class AsyncAssertions {
                 if (end - start > AssertionTimeOutMs) {
                     throw new TimeoutException("timed out waiting for assertion");
                 } else {
-                    modules.poll();
+                    pollables.forEach(Pollable::poll);
                 }
             }
         } catch (Exception e) {
@@ -33,7 +35,7 @@ public class AsyncAssertions {
     }
 
     public static void pollUntil(
-            CompositeModule modules,
+            List<Pollable> pollables,
             Supplier<Boolean> actual
     ) {
         try {
@@ -43,7 +45,7 @@ public class AsyncAssertions {
                 if (end - start > AssertionTimeOutMs) {
                     throw new TimeoutException("timed out waiting for assertion");
                 } else {
-                    modules.poll();
+                    pollables.forEach(Pollable::poll);
                 }
             }
         } catch (Exception e) {

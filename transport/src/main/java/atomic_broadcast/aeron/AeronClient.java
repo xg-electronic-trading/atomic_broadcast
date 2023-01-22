@@ -221,8 +221,4 @@ public class AeronClient implements Module {
     public AeronArchive aeronArchive() {
         return aeronArchive;
     }
-
-    @Override
-    public void poll() {
-    }
 }

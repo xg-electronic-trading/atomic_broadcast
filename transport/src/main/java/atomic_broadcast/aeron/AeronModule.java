@@ -111,9 +111,4 @@ public class AeronModule implements Module {
             archivingMediaDriver.mediaDriver().context().deleteDirectory();
         }
     }
-
-    @Override
-    public void poll() {
-
-    }
 }

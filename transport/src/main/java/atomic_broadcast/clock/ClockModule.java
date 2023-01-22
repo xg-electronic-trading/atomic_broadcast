@@ -28,9 +28,4 @@ public class ClockModule implements Module {
     public void close() {
 
     }
-
-    @Override
-    public void poll() {
-        clock.time();
-    }
 }

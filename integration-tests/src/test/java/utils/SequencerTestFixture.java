@@ -62,7 +62,7 @@ public class SequencerTestFixture {
         Module module = findModule(ModuleName.Sequencer);
         if (module instanceof SequencerModule) {
             SequencerModule seq = (SequencerModule) module;
-            pollUntil(hostA.modules(), expected, seq::state);
+            pollUntil(hostA.pollables(), expected, seq::state);
         }
     }
 
@@ -70,7 +70,7 @@ public class SequencerTestFixture {
         Module module = findModule(ModuleName.ClientTransport);
         if (module instanceof EventBusSubscriberModule) {
             EventBusSubscriberModule eventBus = (EventBusSubscriberModule) module;
-            pollUntil(hostA.modules(), expected, eventBus::state);
+            pollUntil(hostA.pollables(), expected, eventBus::state);
         }
     }
 
@@ -84,7 +84,7 @@ public class SequencerTestFixture {
                     .filter(l -> l instanceof EventPrinter).findFirst();
             if(eventPrinterOpt.isPresent()) {
                 EventPrinter eventPrinter = (EventPrinter) eventPrinterOpt.get();
-                pollUntil(hostA.modules(), () -> eventPrinter.isCommandAcked(id));
+                pollUntil(hostA.pollables(), () -> eventPrinter.isCommandAcked(id));
             } else {
                 fail("Cannot find EventPrinter MessageListener");
             }
@@ -95,7 +95,7 @@ public class SequencerTestFixture {
         Module module = findModule(ModuleName.ClientPublisher);
         if(module instanceof ClientPublisherModule) {
             ClientPublisherModule publisher = (ClientPublisherModule) module;
-            pollUntil(hostA.modules(), expected, publisher::state);
+            pollUntil(hostA.pollables(), expected, publisher::state);
         }
     }
 

@@ -30,12 +30,6 @@ public class CompositeModule implements Module {
         modules.forEach(Module::close);
     }
 
-    public void poll() {
-        for (int i = 0; i < modules.size(); i++) {
-            modules.get(i).poll();
-        }
-    }
-
     public List<Module> getModules() {
         return modules;
     }

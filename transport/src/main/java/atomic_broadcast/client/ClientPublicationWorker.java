@@ -35,9 +35,8 @@ public class ClientPublicationWorker implements TransportWorker {
     }
 
     @Override
-    public boolean poll() {
+    public void poll() {
         doWork();
-        return true;
     }
 
     private int doWork() {

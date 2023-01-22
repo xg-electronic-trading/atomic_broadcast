@@ -45,7 +45,7 @@ public class SequencerTransportWorker implements TransportWorker {
     }
 
     @Override
-    public boolean poll() {
+    public void poll() {
         switch (state) {
             case NoState:
                 break;
@@ -85,8 +85,6 @@ public class SequencerTransportWorker implements TransportWorker {
                 transportClient.pollEventStream();
                 break;
         }
-
-        return true;
     }
 
     @Override
