@@ -1,10 +1,15 @@
 package events;
 
+import atomic_broadcast.AllAppsMain;
 import atomic_broadcast.listener.MessageListener;
+import com.epam.deltix.gflog.api.Log;
+import com.epam.deltix.gflog.api.LogFactory;
 import org.agrona.concurrent.ringbuffer.RingBuffer;
 import schema.api.Packet;
 
 public class RingBufferEventsWriter implements MessageListener {
+
+    private static final Log log = LogFactory.getLog(RingBufferEventsWriter.class.getName());
 
     private final RingBuffer ringBuffer;
 
@@ -24,6 +29,18 @@ public class RingBufferEventsWriter implements MessageListener {
 
     @Override
     public void onMessage(Packet packet) {
-        ringBuffer.write(0, packet.buffer(), 0, packet.buffer().capacity());
+        int offerCount = 0;
+        boolean success = false;
+        while (!success) {
+            success = ringBuffer.write(packet.messageType(), packet.buffer(), 0, packet.buffer().capacity());
+            offerCount++;
+            if (!success) {
+                log.warn().append("event ringbuffer blocked!!!")
+                        .append(" offer count: ").append(offerCount)
+                        .append(" producer position: ").append(ringBuffer.producerPosition())
+                        .append(" consumer position: ").append(ringBuffer.producerPosition())
+                        .append(" backlog (bytes) to consume: ").appendLast(ringBuffer.size());
+            }
+        }
     }
 }
