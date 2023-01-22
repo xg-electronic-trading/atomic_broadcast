@@ -1,6 +1,5 @@
-package events;
+package atomic_broadcast.listener;
 
-import atomic_broadcast.listener.MessageListener;
 import atomic_broadcast.utils.Pollable;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.MessageHandler;

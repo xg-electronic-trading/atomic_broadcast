@@ -7,10 +7,15 @@ import java.util.List;
 
 public class TransportParams implements Resettable {
 
-    private ConnectAs connectAs = ConnectAs.Client;
-    private ConnectUsing connectUsing = ConnectUsing.Ipc;
-    private int instanceId;
+    private ConnectAs connectAs;
+    private ConnectUsing connectUsing;
+    private EventReaderType eventReaderType;
+    private int instanceId = -1;
     private final ArrayList<MessageListener> listeners = new ArrayList<>(10);
+
+    public TransportParams() {
+        reset();
+    }
 
     public TransportParams connectAs(ConnectAs connectAs) {
         this.connectAs = connectAs;
@@ -19,6 +24,11 @@ public class TransportParams implements Resettable {
 
     public TransportParams connectUsing(ConnectUsing connectUsing) {
         this.connectUsing = connectUsing;
+        return this;
+    }
+
+    public TransportParams withEventReader(EventReaderType eventReaderType) {
+        this.eventReaderType = eventReaderType;
         return this;
     }
 
@@ -41,6 +51,8 @@ public class TransportParams implements Resettable {
         return connectUsing;
     }
 
+    public EventReaderType eventReaderType() { return eventReaderType; }
+
     public List<MessageListener> listeners() { return listeners; }
 
     public int instanceId() { return instanceId; }
@@ -49,6 +61,7 @@ public class TransportParams implements Resettable {
     public void reset() {
         connectAs = ConnectAs.Client;
         connectUsing = ConnectUsing.Ipc;
+        eventReaderType = EventReaderType.Direct;
         instanceId = -1;
         for (int i = listeners.size() - 1; i > -1; i--) {
             listeners.remove(i);

@@ -1,7 +1,5 @@
-package events;
+package atomic_broadcast.listener;
 
-import atomic_broadcast.AllAppsMain;
-import atomic_broadcast.listener.MessageListener;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import org.agrona.concurrent.ringbuffer.RingBuffer;

@@ -38,7 +38,7 @@ public class AllAppsMain {
             host.deployShmSeqNoServer()
                     .deployMediaDriver()
                     .deploySequencer(sequencerParams)
-                    .deployClient(clientParams)
+                    .deployClient(clientParams, packet -> {})
                     .start();
 
             while (host.sequencer().state() != PollCommandStream) {

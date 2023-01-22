@@ -2,9 +2,8 @@ package utils;
 
 import atomic_broadcast.client.ClientPublisherModule;
 import atomic_broadcast.client.CommandPublisher;
-import atomic_broadcast.client.EventBusSubscriberModule;
+import atomic_broadcast.client.EventReaderModule;
 import atomic_broadcast.host.Host;
-import atomic_broadcast.listener.MessageListener;
 import atomic_broadcast.sequencer.SequencerModule;
 import atomic_broadcast.utils.*;
 import atomic_broadcast.utils.Module;
@@ -22,19 +21,22 @@ public class SequencerTestFixture {
 
     private Host hostA;
 
-    @BeforeEach
     public void before() {
+        before(EventReaderType.Direct);
+    }
+
+    public void before(EventReaderType eventReaderType) {
         System.setProperty(CommonContext.DEBUG_TIMEOUT_PROP_NAME, "300s");
 
         hostA = new Host("hostA");
 
         TransportParams clientParams = TestTransportParams.createClientParams();
-        clientParams.addListener(new EventPrinter());
+        clientParams.withEventReader(eventReaderType);
 
         hostA.deployShmSeqNoServer()
                 .deployMediaDriver()
                 .deploySequencer(TestTransportParams.createSequenceParams())
-                .deployClient(clientParams)
+                .deployClient(clientParams, new EventPrinter())
                 .start();
 
         pollSequencer(TransportState.PollCommandStream);
@@ -68,22 +70,18 @@ public class SequencerTestFixture {
 
     public void pollClientTransport(TransportState expected) {
         Module module = findModule(ModuleName.ClientTransport);
-        if (module instanceof EventBusSubscriberModule) {
-            EventBusSubscriberModule eventBus = (EventBusSubscriberModule) module;
+        if (module instanceof EventReaderModule) {
+            EventReaderModule eventBus = (EventReaderModule) module;
             pollUntil(hostA.pollables(), expected, eventBus::state);
         }
     }
 
     public void pollUntilCommandAcked(long id) {
         Module module = findModule(ModuleName.ClientTransport);
-        if (module instanceof EventBusSubscriberModule) {
-            EventBusSubscriberModule eventBus = (EventBusSubscriberModule) module;
-            Optional<MessageListener> eventPrinterOpt= eventBus.params()
-                    .listeners()
-                    .stream()
-                    .filter(l -> l instanceof EventPrinter).findFirst();
-            if(eventPrinterOpt.isPresent()) {
-                EventPrinter eventPrinter = (EventPrinter) eventPrinterOpt.get();
+        if (module instanceof EventReaderModule) {
+            EventReaderModule eventBus = (EventReaderModule) module;
+            if (eventBus.listener() instanceof EventPrinter) {
+                EventPrinter eventPrinter = (EventPrinter) eventBus.listener();
                 pollUntil(hostA.pollables(), () -> eventPrinter.isCommandAcked(id));
             } else {
                 fail("Cannot find EventPrinter MessageListener");

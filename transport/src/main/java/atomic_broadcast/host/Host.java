@@ -3,12 +3,13 @@ package atomic_broadcast.host;
 import atomic_broadcast.aeron.*;
 import atomic_broadcast.client.ClientPublisherModule;
 import atomic_broadcast.client.CommandPublisher;
-import atomic_broadcast.client.EventBusSubscriberModule;
+import atomic_broadcast.client.EventReaderModule;
 import atomic_broadcast.client.TransportClient;
 import atomic_broadcast.consensus.SeqNoClient;
 import atomic_broadcast.consensus.SeqNoProvider;
 import atomic_broadcast.consensus.ShmSeqNoClient;
 import atomic_broadcast.consensus.ShmSeqNoServer;
+import atomic_broadcast.listener.MessageListener;
 import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.sequencer.SequencerModule;
 import atomic_broadcast.utils.CompositeModule;
@@ -33,7 +34,7 @@ public class Host {
     private List<Pollable> pollables;
     private AeronModule mediaDriver;
     private SequencerModule sequencer;
-    private EventBusSubscriberModule eventbus;
+    private EventReaderModule eventbus;
     private ClientPublisherModule publisher;
     private final AeronParams params;
     private final Clock clock;
@@ -79,13 +80,14 @@ public class Host {
         return this;
     }
 
-    public Host deployClient(TransportParams transportParams) {
+    public Host deployClient(TransportParams transportParams, MessageListener listener) {
         AeronClient aeronClient = new AeronClient(params);
         TransportClient transportClient = new AeronTransportClient(aeronClient, transportParams);
         CommandPublisher cmdPublisher = new AeronPublisherClient(aeronClient);
-        eventbus = new EventBusSubscriberModule(transportClient, transportParams);
+        eventbus = new EventReaderModule(transportClient, transportParams, listener);
         publisher = new ClientPublisherModule(cmdPublisher, transportParams);
         pollables.add(eventbus.transport());
+        pollables.add(eventbus.eventsReader());
         pollables.add(publisher.transport());
         modules.add(aeronClient);
         modules.add(eventbus);
@@ -117,7 +119,7 @@ public class Host {
         return sequencer;
     }
 
-    public EventBusSubscriberModule eventbus() {
+    public EventReaderModule eventbus() {
         return eventbus;
     }
 

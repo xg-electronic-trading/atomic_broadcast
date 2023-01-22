@@ -5,6 +5,7 @@ import atomic_broadcast.client.CommandProcessorImpl;
 import atomic_broadcast.client.CommandPublisher;
 import atomic_broadcast.client.NoOpCommandValidator;
 import atomic_broadcast.utils.Action;
+import atomic_broadcast.utils.EventReaderType;
 import com.messages.sbe.OrdTypeEnum;
 import com.messages.sbe.SideEnum;
 import com.messages.sbe.StrategyEnum;
@@ -13,6 +14,8 @@ import command.CommandBuilder;
 import command.CommandBuilderImpl;
 import command.NewOrderSingleCommandImpl;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import utils.SequencerTestFixture;
 
 import static atomic_broadcast.utils.Action.CommandSent;
@@ -24,11 +27,12 @@ public class SingleHostSequencerRoundTripTest {
     @BeforeEach
     public void before() {
         fixture = new SequencerTestFixture();
-        fixture.before();
     }
 
-    @Test
-    public void singleMessageRoundTrip() {
+    @ParameterizedTest
+    @EnumSource(EventReaderType.class)
+    public void singleMessageRoundTrip(EventReaderType eventReaderType) {
+        fixture.before(eventReaderType);
         /**
          * Add logic to push a message through sequencer via
          * a command builder and assert it round trips through
