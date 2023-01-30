@@ -13,7 +13,10 @@ import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.codecs.RecordingSignal;
 import io.aeron.archive.codecs.SourceLocation;
 import org.agrona.CloseHelper;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.SleepingMillisIdleStrategy;
 
+import java.io.File;
 import java.util.Comparator;
 import java.util.Optional;
 
@@ -39,6 +42,7 @@ public class AeronClient implements Module {
     private final RecordingDescriptorConsumerImpl recordingDescriptorConsumer = new RecordingDescriptorConsumerImpl();
     private final RecordingSignalConsumerImpl recordingSignalConsumer = new RecordingSignalConsumerImpl();
     private final RecordingDescriptor recordingDescriptor = new RecordingDescriptor();
+    private final IdleStrategy aeronDirIdleStrategy = new SleepingMillisIdleStrategy(1_000L);
 
     @Override
     public ModuleName name() {
@@ -56,11 +60,21 @@ public class AeronClient implements Module {
 
     @Override
     public void start() {
+        log.info().append("waiting for aeron dir creation: ").appendLast(params.aeronDir());
+        awaitTillAeronDirExists();
         aeron = Aeron.connect(
                 new Aeron.Context()
                         .aeronDirectoryName(params.aeronDir()));
 
         log.info().appendLast("connected to media driver");
+    }
+
+    private void awaitTillAeronDirExists() {
+        //do not connect until aeron dir exists
+        File file = new File(params.aeronDir());
+        while (!file.exists()) {
+            aeronDirIdleStrategy.idle();
+        }
     }
 
     @Override

@@ -1,19 +1,19 @@
 package container;
 
+import atomic_broadcast.utils.Pollable;
 import orderstate.StateCache;
 import subscriptions.MarketDataPoller;
 
-public class AlgoMainLoop implements Container {
+public class AlgoMainLoop implements Pollable {
 
-
-    private final MarketDataPoller marketData;
-    private final StateCache osCache;
+    private final Pollable events;
+    private final Pollable marketData;
 
     public AlgoMainLoop(
-            MarketDataPoller marketData,
-            StateCache osCache) {
+            Pollable events,
+            Pollable marketData) {
+        this.events = events;
         this.marketData = marketData;
-        this.osCache = osCache;
     }
 
 
@@ -28,8 +28,9 @@ public class AlgoMainLoop implements Container {
      */
 
     @Override
-    public void executeCalcCycle() {
+    public void poll() {
         // 1. poll events
+        events.poll();
 
         // 2. poll market data + market data derived signals
         marketData.poll();
@@ -38,7 +39,6 @@ public class AlgoMainLoop implements Container {
 
         // 4. trigger algos
         runAlgosWithContext();
-
     }
 
     private void runAlgosWithContext() {
