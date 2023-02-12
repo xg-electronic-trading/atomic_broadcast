@@ -16,7 +16,7 @@ import pool.ObjectPool;
  * through orders and triggering algos.
  */
 
-public class ByteBufferOrderStateCache implements StateCache, OrderStateSetter {
+public class ByteBufferOrderStateCache implements StateCache {
 
     private final int NULL_VALUE = -1;
     private final int BYTES_PER_KB = 1024;
@@ -32,7 +32,7 @@ public class ByteBufferOrderStateCache implements StateCache, OrderStateSetter {
     }
 
     @Override
-    public OrderState orderState(long id) {
+    public OrderStateFlyweight orderState(long id) {
         long index = findAndSetObjectOffset(id);
 
         if (index != NULL_VALUE) {
@@ -69,26 +69,5 @@ public class ByteBufferOrderStateCache implements StateCache, OrderStateSetter {
     public void close() {
         id2Index.clear();
         flyweight.close();
-    }
-
-
-    @Override
-    public void setId(long id) {
-        flyweight.setOrderId(id);
-    }
-
-    @Override
-    public void setPrice(long price) {
-        flyweight.setPrice(price);
-    }
-
-    @Override
-    public void setQuantity(long quantity) {
-        flyweight.setQuantity(quantity);
-    }
-
-    @Override
-    public void setMsgSeqNum(long msgSeqNum) {
-        flyweight.setMsgSeqNum(msgSeqNum);
     }
 }

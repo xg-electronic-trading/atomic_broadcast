@@ -5,7 +5,7 @@ import pool.ObjectPool;
 
 public class MapOrderStateCache implements StateCache {
 
-    private final Long2ObjectHashMap<MutableOrderState> map = new Long2ObjectHashMap<>(4_000_000, 0.55f, true);
+    private final Long2ObjectHashMap<MutableOrderState> map = new Long2ObjectHashMap<>(20_000_000, 0.55f, true);
     private final ObjectPool<MutableOrderState> pool;
 
     public MapOrderStateCache(ObjectPool<MutableOrderState> pool) {
@@ -14,15 +14,15 @@ public class MapOrderStateCache implements StateCache {
 
     @Override
     public MutableOrderState orderState(long id) {
-        if(map.containsKey(id)) {
-            return map.get(id);
+        MutableOrderState os;
+        if (map.containsKey(id)) {
+            os = map.get(id);
         } else {
-            MutableOrderState state = pool.construct();
-            state.orderId = id;
-            return state;
+            os = pool.construct();
+            os.orderId = id;
         }
+        return os;
     }
-
 
     public void commitState(MutableOrderState state) {
         map.put(state.orderId, state);

@@ -2,7 +2,7 @@ package orderstate;
 
 public interface OrderStateSetter {
 
-    void setId(long id);
+    void setOrderId(long id);
 
     void setPrice(long price);
 

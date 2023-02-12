@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 public class MapOrderStateCacheBenchmark {
 
     private MapOrderStateCache cache;
-    private final int MAX_ORDERS = 1_310_000;
+    private final int MAX_ORDERS = 4_369_067;
 
     @Setup(Level.Iteration)
     public void setup() {

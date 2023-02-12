@@ -12,6 +12,9 @@ import com.epam.deltix.gflog.api.LogFactory;
 import events.AlgoEventListener;
 import events.AlgoOrderEventHandler;
 import events.OrderEventHandler;
+import orderstate.ByteBufferOrderStateCache;
+import orderstate.OrderStateField;
+import orderstate.StateCache;
 import org.agrona.IoUtil;
 import subscriptions.MarketDataHandler;
 import subscriptions.MarketDataHandlerImpl;
@@ -25,8 +28,16 @@ public class AlgoContainerMain {
 
     public static void main(String[] args) {
         try {
+            OrderStateField[] fields = new OrderStateField[]{
+                    OrderStateField.Id,
+                    OrderStateField.Price,
+                    OrderStateField.Quantity,
+                    OrderStateField.MsgSeqNum};
+
+            StateCache cache = new ByteBufferOrderStateCache(false, 1, fields);
+
             start(
-                 new AlgoOrderEventHandler(),
+                 new AlgoOrderEventHandler(cache),
                  new MarketDataHandlerImpl(),
                  new AlgoCommandValidator()
             );

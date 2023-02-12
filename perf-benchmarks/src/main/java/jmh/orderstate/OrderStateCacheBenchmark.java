@@ -2,9 +2,7 @@ package jmh.orderstate;
 
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
-import orderstate.ByteBufferOrderStateCache;
-import orderstate.OrderState;
-import orderstate.OrderStateField;
+import orderstate.*;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import pool.ObjectPoolDefinitions;
@@ -23,18 +21,19 @@ public class OrderStateCacheBenchmark {
 
     @Setup(Level.Iteration)
     public void setup() {
+        System.setProperty("agrona.disable.bounds.checks", "true");
         ObjectPoolDefinitions pools = new ObjectPoolDefinitions();
         OrderStateField[] fields = new OrderStateField[] {
                 OrderStateField.Id,
                 OrderStateField.Price,
                 OrderStateField.Quantity
         };
-        cache = new ByteBufferOrderStateCache(offHeap, 30, fields);
+        cache = new ByteBufferOrderStateCache(offHeap, 100, fields);
 
         for (int i = 0; i < cache.maxOrders() - 1; i++) {
-            cache.orderState(i);
-            cache.setPrice(i);
-            cache.setQuantity(i * 10L);
+            OrderStateFlyweight state = cache.orderState(i);
+            state.setPrice(i);
+            state.setQuantity(i * 10L);
         }
     }
 
@@ -51,9 +50,9 @@ public class OrderStateCacheBenchmark {
     @Measurement(iterations = 5)
     public void testCommitNewOrderState(Blackhole blackhole) {
         long orderId = 1L;
-        OrderState os = cache.orderState(orderId);
-        cache.setQuantity(10);
-        cache.setPrice(10);
+        OrderStateFlyweight state = cache.orderState(orderId);
+        state.setQuantity(10);
+        state.setPrice(10);
 
         blackhole.consume(cache);
     }

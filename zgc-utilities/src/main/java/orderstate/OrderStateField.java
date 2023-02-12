@@ -8,8 +8,7 @@ public enum OrderStateField {
     Id(0, LongType, Long.BYTES),
     Price(1, LongType, Long.BYTES),
     Quantity(2, LongType, Long.BYTES),
-
-    MsgSeqNum(3, IntType, Integer.BYTES);
+    MsgSeqNum(3, LongType, Long.BYTES);
 
 
     private final int code;

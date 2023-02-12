@@ -1,10 +1,18 @@
 package events;
 
+import orderstate.OrderState;
+import orderstate.StateCache;
 import schema.api.NewOrderSingle;
 import schema.api.OrderCancelReplaceRequest;
 import schema.api.OrderCancelRequest;
 
 public class AlgoOrderEventHandler implements OrderEventHandler {
+
+    private final StateCache osCache;
+
+    public AlgoOrderEventHandler(StateCache osCache) {
+        this.osCache = osCache;
+    }
 
     /**
      * @param newOrder - this is a flyweight object that wraps around a buffer, providing direct
@@ -27,7 +35,6 @@ public class AlgoOrderEventHandler implements OrderEventHandler {
 
     @Override
     public void onNewOrderSingle(NewOrderSingle newOrder) {
-
     }
 
     @Override

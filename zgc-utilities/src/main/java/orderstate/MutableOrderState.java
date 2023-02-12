@@ -1,11 +1,11 @@
 package orderstate;
 
-public class MutableOrderState extends AbstractPooledObject implements OrderState {
+public class MutableOrderState extends AbstractPooledObject implements OrderState, OrderStateSetter {
 
     public long orderId;
     public long price;
     public long quantity;
-    public int msgSeqNum;
+    public long msgSeqNum;
 
     public MutableOrderState() {
         reset();
@@ -31,54 +31,6 @@ public class MutableOrderState extends AbstractPooledObject implements OrderStat
         return msgSeqNum;
     }
 
-    public long getLong(OrderStateField field) {
-        switch (field) {
-            case Id:
-                return orderId;
-            case Price:
-                return price;
-            case Quantity:
-                return quantity;
-            default:
-                throw new IllegalArgumentException("field not found in order state: " + field);
-        }
-    }
-
-    public int getInt(OrderStateField field) {
-        switch (field) {
-            case MsgSeqNum:
-                return msgSeqNum;
-            default:
-                throw new IllegalArgumentException("field not found in order state: " + field);
-        }
-    }
-
-    public void set(OrderStateField field, long value) {
-        switch (field) {
-            case Id:
-                orderId = value;
-                break;
-            case Price:
-                price = value;
-                break;
-            case Quantity:
-                quantity = value;
-                break;
-            default:
-                throw new IllegalArgumentException("field not found in order state: " + field);
-        }
-    }
-
-    public void set(OrderStateField field, int value) {
-        switch (field) {
-            case MsgSeqNum:
-                msgSeqNum = value;
-                break;
-            default:
-                throw new IllegalArgumentException("field not found in order state: " + field);
-        }
-    }
-
     @Override
     public void reset() {
         price = -1;
@@ -86,5 +38,25 @@ public class MutableOrderState extends AbstractPooledObject implements OrderStat
         orderId = -1;
         msgSeqNum = -1;
 
+    }
+
+    @Override
+    public void setOrderId(long id) {
+        this.orderId = id;
+    }
+
+    @Override
+    public void setPrice(long price) {
+        this.price = price;
+    }
+
+    @Override
+    public void setQuantity(long quantity) {
+        this.quantity = quantity;
+    }
+
+    @Override
+    public void setMsgSeqNum(long msgSeqNum) {
+        this.msgSeqNum = msgSeqNum;
     }
 }

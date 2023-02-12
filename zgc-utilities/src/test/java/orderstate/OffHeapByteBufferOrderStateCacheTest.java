@@ -23,10 +23,10 @@ public class OffHeapByteBufferOrderStateCacheTest {
         cache = new ByteBufferOrderStateCache(true, 1, fields);
 
         for (int i = 0; i < cache.maxOrders() - 1; i++) {
-            OrderState state = cache.orderState(i);
-            cache.setId(i);
-            cache.setPrice(i);
-            cache.setQuantity(i * 10L);
+            OrderStateFlyweight state = cache.orderState(i);
+            state.setOrderId(i);
+            state.setPrice(i);
+            state.setQuantity(i * 10L);
         }
     }
 
@@ -39,9 +39,9 @@ public class OffHeapByteBufferOrderStateCacheTest {
     @Test
     public void startStopCache() {
         long orderId = 1L;
-        cache.orderState(orderId);
-        cache.setQuantity(10);
-        cache.setPrice(10);
+        OrderStateFlyweight state = cache.orderState(orderId);
+        state.setQuantity(10);
+        state.setPrice(10);
 
 
         OrderState readOs = cache.orderState(orderId);
@@ -49,7 +49,7 @@ public class OffHeapByteBufferOrderStateCacheTest {
         assertEquals(orderId, readOs.orderId());
         assertEquals(10, readOs.quantity());
 
-        cache.setPrice(11);
+        state.setPrice(11);
 
         assertEquals(11, readOs.price());
     }

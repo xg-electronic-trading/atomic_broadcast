@@ -7,7 +7,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 
 import java.nio.ByteBuffer;
 
-public class OrderStateFlyweight implements OrderState {
+public class OrderStateFlyweight implements OrderState, OrderStateSetter {
 
     Log log = LogFactory.getLog(this.getClass().getName());
 
