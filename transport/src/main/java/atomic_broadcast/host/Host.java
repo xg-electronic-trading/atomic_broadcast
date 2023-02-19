@@ -1,14 +1,9 @@
 package atomic_broadcast.host;
 
 import atomic_broadcast.aeron.*;
-import atomic_broadcast.client.ClientPublisherModule;
-import atomic_broadcast.client.CommandPublisher;
-import atomic_broadcast.client.EventReaderModule;
-import atomic_broadcast.client.TransportClient;
+import atomic_broadcast.client.*;
 import atomic_broadcast.consensus.SeqNoClient;
-import atomic_broadcast.consensus.SeqNoProvider;
 import atomic_broadcast.consensus.ShmSeqNoClient;
-import atomic_broadcast.consensus.ShmSeqNoServer;
 import atomic_broadcast.listener.MessageListener;
 import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.sequencer.SequencerModule;
@@ -29,7 +24,7 @@ public class Host {
 
     Log log = LogFactory.getLog(this.getClass().getName());
 
-    private String alias;
+    private int hostNum;
     private CompositeModule modules;
     private List<Pollable> pollables;
     private AeronModule mediaDriver;
@@ -39,11 +34,11 @@ public class Host {
     private final AeronParams params;
     private final Clock clock;
 
-    public Host(String alias) {
-        String aeronDir = IoUtil.tmpDirName()+"/"+alias+"/"+"aeron";
+    public Host(int hostNum) {
+        String aeronDir = IoUtil.tmpDirName()+"/"+hostNum+"/"+"aeron";
         log.info().append("using aeron dir: ").appendLast(aeronDir);
 
-        this.alias = alias;
+        this.hostNum = hostNum;
         this.pollables = new ArrayList<>(20);
         this.clock = new RealClock();
         this.modules = new CompositeModule();
@@ -56,13 +51,6 @@ public class Host {
                 .clock(clock);
     }
 
-    public Host deployShmSeqNoServer() {
-        ShmSeqNoServer shmSeqNoServer = new ShmSeqNoServer();
-        shmSeqNoServer.setReady(true);
-        shmSeqNoServer.writeSeqNum(1, 1, 0);
-        return this;
-    }
-
     public Host deployMediaDriver() {
         mediaDriver = new AeronModule(params);
         modules.add(mediaDriver);
@@ -71,9 +59,9 @@ public class Host {
 
     public Host deploySequencer(TransportParams transportParams) {
         AeronClient aeronClient = new AeronClient(params);
-        SequencerClient sequencerClient = new AeronSequencerClient(aeronClient, transportParams);
-        SeqNoProvider seqNoProvider = new SeqNoClient(new ShmSeqNoClient());
-        sequencer = new SequencerModule(transportParams, sequencerClient, seqNoProvider);
+        SeqNoClient seqNoClient = new SeqNoClient(new ShmSeqNoClient(transportParams.instanceId()));
+        SequencerClient sequencerClient = new AeronSequencerClient(aeronClient, transportParams, seqNoClient);
+        sequencer = new SequencerModule(transportParams, sequencerClient, seqNoClient);
         pollables.add(sequencer.transport());
         modules.add(aeronClient);
         modules.add(sequencer);
@@ -124,5 +112,7 @@ public class Host {
     }
 
     public ClientPublisherModule publisher() { return publisher; }
+
+    public int hostNum() { return hostNum; }
 
 }

@@ -1,5 +1,6 @@
 package atomic_broadcast.aeron;
 
+import atomic_broadcast.consensus.ClientSeqNumWriter;
 import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
@@ -54,10 +55,10 @@ public class AeronSequencerClient implements SequencerClient {
             .endpoint(DYNAMIC_ENDPOINT)
             .build();
 
-    public AeronSequencerClient(AeronClient aeronClient, TransportParams params) {
+    public AeronSequencerClient(AeronClient aeronClient, TransportParams params, ClientSeqNumWriter seqNumWriter) {
         this.aeronClient = aeronClient;
         this.params = params;
-        this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(this, params.listeners()));
+        this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(this, params.listeners(), seqNumWriter, params.instanceId()));
     }
 
     @Override

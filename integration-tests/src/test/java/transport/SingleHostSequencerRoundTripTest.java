@@ -32,7 +32,8 @@ public class SingleHostSequencerRoundTripTest {
     @ParameterizedTest
     @EnumSource(EventReaderType.class)
     public void singleMessageRoundTrip(EventReaderType eventReaderType) {
-        fixture.before(eventReaderType);
+        fixture.before(eventReaderType, 1);
+        fixture.start();
         /**
          * Add logic to push a message through sequencer via
          * a command builder and assert it round trips through

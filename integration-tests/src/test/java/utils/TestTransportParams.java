@@ -9,7 +9,7 @@ import listener.EventPrinter;
 
 public class TestTransportParams {
 
-    public static TransportParams createSequenceParams() {
+    public static TransportParams createSequencerParams() {
         return new TransportParams()
                 .connectAs(ConnectAs.Sequencer)
                 .connectUsing(ConnectUsing.Unicast)

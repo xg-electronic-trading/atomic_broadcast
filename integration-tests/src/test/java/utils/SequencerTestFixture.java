@@ -10,8 +10,9 @@ import atomic_broadcast.utils.Module;
 import io.aeron.CommonContext;
 import listener.EventPrinter;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.fail;
@@ -19,37 +20,52 @@ import static utils.AsyncAssertions.pollUntil;
 
 public class SequencerTestFixture {
 
-    private Host hostA;
+    private final List<Host> hosts = new ArrayList<>(10);
 
     public void before() {
-        before(EventReaderType.Direct);
+        before(EventReaderType.Direct, 1);
     }
 
-    public void before(EventReaderType eventReaderType) {
+    public void before(EventReaderType eventReaderType, int numSequencers) {
         System.setProperty(CommonContext.DEBUG_TIMEOUT_PROP_NAME, "300s");
 
-        hostA = new Host("hostA");
+        for (int i = 0; i < numSequencers; i++) {
+            Host host = new Host(i);
+            TransportParams clientParams = TestTransportParams.createClientParams();
+            clientParams.withEventReader(eventReaderType);
 
-        TransportParams clientParams = TestTransportParams.createClientParams();
-        clientParams.withEventReader(eventReaderType);
+            host.deployMediaDriver()
+                .deploySequencer(TestTransportParams.createSequencerParams().instance(i))
+                .deployClient(clientParams, new EventPrinter());
 
-        hostA.deployShmSeqNoServer()
-                .deployMediaDriver()
-                .deploySequencer(TestTransportParams.createSequenceParams())
-                .deployClient(clientParams, new EventPrinter())
-                .start();
+            hosts.add(host);
+        }
+    }
 
-        pollSequencer(TransportState.PollCommandStream);
-        pollPublisher(TransportState.ConnectedToCommandStream);
-        pollClientTransport(TransportState.PollEventStream);
+    public void start() {
+        hosts.forEach(Host::start);
+        hosts.forEach(h -> {
+            pollSequencer(TransportState.PollCommandStream, h);
+            pollPublisher(TransportState.ConnectedToCommandStream, h);
+            pollClientTransport(TransportState.PollEventStream, h);
+        });
     }
 
     public CommandPublisher cmdPublisher() {
-        return hostA.publisher().cmdPublisher();
+        Optional<Host> hostOpt = hosts.stream().filter(h -> h.hostNum() == 0).findFirst();
+        if (hostOpt.isPresent()) {
+            return hostOpt.get().publisher().cmdPublisher();
+        } else {
+            throw new IllegalArgumentException("host-0 not found");
+        }
     }
 
-    public Module findModule(ModuleName name) {
-        Optional<Module> modOpt = hostA.moduleList()
+    public CommandPublisher cmdPublisher(Host host) {
+        return host.publisher().cmdPublisher();
+    }
+
+    public Module findModule(ModuleName name, Host host) {
+        Optional<Module> modOpt = host.moduleList()
                 .stream()
                 .filter(m -> m.name() == name)
                 .findFirst();
@@ -60,46 +76,52 @@ public class SequencerTestFixture {
         }
     }
 
-    public void pollSequencer(TransportState expected) {
-        Module module = findModule(ModuleName.Sequencer);
+    public void pollSequencer(TransportState expected, Host host) {
+        Module module = findModule(ModuleName.Sequencer, host);
         if (module instanceof SequencerModule) {
             SequencerModule seq = (SequencerModule) module;
-            pollUntil(hostA.pollables(), expected, seq::state);
+            pollUntil(host.pollables(), expected, seq::state);
         }
     }
 
-    public void pollClientTransport(TransportState expected) {
-        Module module = findModule(ModuleName.ClientTransport);
+    public void pollClientTransport(TransportState expected, Host host) {
+        Module module = findModule(ModuleName.ClientTransport, host);
         if (module instanceof EventReaderModule) {
             EventReaderModule eventBus = (EventReaderModule) module;
-            pollUntil(hostA.pollables(), expected, eventBus::state);
+            pollUntil(host.pollables(), expected, eventBus::state);
         }
     }
 
     public void pollUntilCommandAcked(long id) {
-        Module module = findModule(ModuleName.ClientTransport);
+        hosts.forEach(h -> {
+            pollUntilCommandAcked(id, h);
+        });
+    }
+
+    public void pollUntilCommandAcked(long id, Host host) {
+        Module module = findModule(ModuleName.ClientTransport, host);
         if (module instanceof EventReaderModule) {
             EventReaderModule eventBus = (EventReaderModule) module;
             if (eventBus.listener() instanceof EventPrinter) {
                 EventPrinter eventPrinter = (EventPrinter) eventBus.listener();
-                pollUntil(hostA.pollables(), () -> eventPrinter.isCommandAcked(id));
+                pollUntil(host.pollables(), () -> eventPrinter.isCommandAcked(id));
             } else {
                 fail("Cannot find EventPrinter MessageListener");
             }
         }
     }
 
-    public void pollPublisher(TransportState expected) {
-        Module module = findModule(ModuleName.ClientPublisher);
+    public void pollPublisher(TransportState expected, Host host) {
+        Module module = findModule(ModuleName.ClientPublisher, host);
         if(module instanceof ClientPublisherModule) {
             ClientPublisherModule publisher = (ClientPublisherModule) module;
-            pollUntil(hostA.pollables(), expected, publisher::state);
+            pollUntil(host.pollables(), expected, publisher::state);
         }
     }
 
 
     @AfterEach
     public void after() {
-        hostA.close();
+        hosts.forEach(Host::close);
     }
 }

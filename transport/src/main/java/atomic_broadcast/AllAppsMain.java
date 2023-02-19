@@ -33,13 +33,13 @@ public class AllAppsMain {
                     .addListener(new SequencerCommandHandler())
                     .instance(1);
 
-            Host host = new Host("host-a");
+            Host host = new Host(1);
 
-            host.deployShmSeqNoServer()
-                    .deployMediaDriver()
-                    .deploySequencer(sequencerParams)
-                    .deployClient(clientParams, packet -> {})
-                    .start();
+            host
+                .deployMediaDriver()
+                .deploySequencer(sequencerParams)
+                .deployClient(clientParams, packet -> {})
+                .start();
 
             while (host.sequencer().state() != PollCommandStream) {
                 host.pollables().forEach(Pollable::poll);

@@ -14,7 +14,7 @@ public class SeqNoClient implements SeqNoProvider, ClientSeqNumWriter {
     }
 
     @Override
-    public void writeSeqNum(int component, int instance, int seqNo) {
-        shmClient.writeSeqNum(component, instance, seqNo);
+    public void writeSeqNum(boolean isReady, int instance, long seqNo) {
+        shmClient.writeSeqNum(isReady, instance, seqNo);
     }
 }
