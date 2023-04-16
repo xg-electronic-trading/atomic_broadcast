@@ -3,5 +3,6 @@ package atomic_broadcast.utils;
 public enum ConnectAs {
 
     Client,
-    Sequencer
+    Sequencer,
+    ClusterClient
 }

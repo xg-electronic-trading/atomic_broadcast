@@ -14,6 +14,7 @@ public class ClientPublisherModule implements Module {
     public ClientPublisherModule(CommandPublisher commandPublisher, TransportParams params) {
         this.commandPublisher = commandPublisher;
         switch (params.connectAs()) {
+            case ClusterClient:
             case Client:
                 transportSession = new ClientPublicationWorker(params, commandPublisher);
                 break;

@@ -10,6 +10,7 @@ public class TransportParams implements Resettable {
     private ConnectAs connectAs;
     private ConnectUsing connectUsing;
     private EventReaderType eventReaderType;
+    private String publicationChannel;
     private int instanceId = -1;
     private final ArrayList<MessageListener> listeners = new ArrayList<>(10);
 
@@ -42,6 +43,11 @@ public class TransportParams implements Resettable {
         return this;
     }
 
+    public TransportParams addPublicationChannel(String channel) {
+        this.publicationChannel = channel;
+        return this;
+    }
+
 
     public ConnectAs connectAs() {
         return connectAs;
@@ -57,11 +63,14 @@ public class TransportParams implements Resettable {
 
     public int instanceId() { return instanceId; }
 
+    public String publicationChannel() { return publicationChannel; }
+
     @Override
     public void reset() {
         connectAs = ConnectAs.Client;
         connectUsing = ConnectUsing.Ipc;
         eventReaderType = EventReaderType.Direct;
+        publicationChannel = "";
         instanceId = -1;
         for (int i = listeners.size() - 1; i > -1; i--) {
             listeners.remove(i);

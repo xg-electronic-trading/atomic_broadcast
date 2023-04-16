@@ -2,9 +2,7 @@ package atomic_broadcast.consensus;
 
 public interface SeqNumSnapshot {
 
-    boolean isReady();
+    long seqNo();
 
-    long instanceSeqNum(int instanceId);
-
-    int leaderInstance();
+    int instance();
 }

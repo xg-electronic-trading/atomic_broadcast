@@ -7,7 +7,8 @@ public enum ModuleName implements CodedEnum {
     AeronClient(3),
     Composite(4),
     ClientPublisher(5),
-    Clock(6);
+    Clock(6),
+    Consensus(7);
 
 
     private final int code;

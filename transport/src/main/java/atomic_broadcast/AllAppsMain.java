@@ -3,6 +3,7 @@
  */
 package atomic_broadcast;
 
+import atomic_broadcast.consensus.ConsensusEventListener;
 import atomic_broadcast.host.Host;
 import atomic_broadcast.sequencer.*;
 import atomic_broadcast.utils.ConnectAs;
@@ -11,7 +12,12 @@ import atomic_broadcast.utils.Pollable;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
+import io.aeron.ChannelUriStringBuilder;
+import io.aeron.CommonContext;
+import time.Clock;
+import time.RealClock;
 
+import static atomic_broadcast.aeron.AeronModule.COMMAND_ENDPOINT;
 import static atomic_broadcast.utils.TransportState.PollCommandStream;
 import static atomic_broadcast.utils.TransportState.PollEventStream;
 
@@ -24,7 +30,11 @@ public class AllAppsMain {
             TransportParams clientParams = new TransportParams();
             clientParams
                     .connectAs(ConnectAs.Client)
-                    .connectUsing(ConnectUsing.Unicast);
+                    .connectUsing(ConnectUsing.Unicast)
+                    .addPublicationChannel(new ChannelUriStringBuilder()
+                    .media(CommonContext.UDP_MEDIA)
+                    .endpoint(COMMAND_ENDPOINT)
+                    .build());
 
             TransportParams sequencerParams = new TransportParams();
             sequencerParams
@@ -33,11 +43,17 @@ public class AllAppsMain {
                     .addListener(new SequencerCommandHandler())
                     .instance(1);
 
+            TransportParams consensusParams = new TransportParams();
+            consensusParams
+                    .connectAs(ConnectAs.ClusterClient)
+                    .connectUsing(ConnectUsing.Unicast)
+                    .instance(1);
+
             Host host = new Host(1);
 
             host
                 .deployMediaDriver()
-                .deploySequencer(sequencerParams)
+                .deploySequencer(sequencerParams, consensusParams)
                 .deployClient(clientParams, packet -> {})
                 .start();
 

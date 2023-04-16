@@ -22,5 +22,4 @@ public interface SequencerClient extends EventSubscriber {
     boolean isPublicationClosed();
 
     boolean publish(DirectBuffer buffer, int offset, int length);
-
 }

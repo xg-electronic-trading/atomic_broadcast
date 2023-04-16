@@ -1,7 +1,7 @@
 package atomic_broadcast.sequencer;
 
 import atomic_broadcast.client.TransportWorker;
-import atomic_broadcast.consensus.SeqNoProvider;
+import atomic_broadcast.consensus.ConsensusStateHolder;
 import atomic_broadcast.utils.*;
 import atomic_broadcast.utils.Module;
 
@@ -13,10 +13,10 @@ public class SequencerModule implements Module {
     public SequencerModule(
             TransportParams params,
             SequencerClient transport,
-            SeqNoProvider seqNoProvider) {
+            ConsensusStateHolder consensusStateHolder) {
         switch (params.connectAs()) {
             case Sequencer:
-                this.transportSession = new SequencerTransportWorker(params, transport, seqNoProvider);
+                this.transportSession = new SequencerTransportWorker(params, transport, consensusStateHolder);
                 break;
             default:
                 throw new IllegalArgumentException("error: trying to connect as: " + params.connectAs());

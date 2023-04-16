@@ -21,7 +21,7 @@ public class ClientPublicationWorker implements TransportWorker {
     }
 
     @Override
-    public void start() {
+    public void  start() {
         setState(ConnectToCommandStream);
     }
 

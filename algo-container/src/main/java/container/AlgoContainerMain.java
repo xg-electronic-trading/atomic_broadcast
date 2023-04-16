@@ -22,6 +22,8 @@ import validator.AlgoCommandValidator;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static atomic_broadcast.aeron.AeronModule.ARCHIVE_REQUEST_PORT_RANGE_START;
+
 public class AlgoContainerMain {
 
     private static final Log log = LogFactory.getLog(AlgoContainerMain.class.getName());
@@ -65,9 +67,7 @@ public class AlgoContainerMain {
                 .withEventReader(EventReaderType.RingBuffer);
 
         AeronParams params = new AeronParams()
-                .commandPort(40001)
-                .eventPort(40002)
-                .archivePort(8010)
+                .archivePort(ARCHIVE_REQUEST_PORT_RANGE_START)
                 .aeronDir(aeronDir)
                 .lowLatencyMode(false);
 

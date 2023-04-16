@@ -22,19 +22,17 @@ public class AeronPublisherClient implements CommandPublisher {
 
     private final BufferClaim bufferClaim = new BufferClaim();
 
-    private final String commandStreamPublicationChannel = new ChannelUriStringBuilder()
-            .media(CommonContext.UDP_MEDIA)
-            .endpoint(COMMAND_ENDPOINT)
-            .build();
+    private final String publicationChannel;
 
-    public AeronPublisherClient(AeronClient aeronClient) {
+    public AeronPublisherClient(AeronClient aeronClient, String publicationChannel) {
         this.aeronClient = aeronClient;
+        this.publicationChannel = publicationChannel;
     }
 
     @Override
     public boolean connectToCommandStream() {
         if (null == publication) {
-            publication = aeronClient.addPublication(commandStreamPublicationChannel, COMMAND_STREAM_ID);
+            publication = aeronClient.addPublication(publicationChannel, COMMAND_STREAM_ID);
             return null != publication;
         } else {
             return true;

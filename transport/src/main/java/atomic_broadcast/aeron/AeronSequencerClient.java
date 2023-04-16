@@ -1,7 +1,9 @@
 package atomic_broadcast.aeron;
 
 import atomic_broadcast.consensus.ClientSeqNumWriter;
+import atomic_broadcast.consensus.ConsensusStateHolder;
 import atomic_broadcast.sequencer.SequencerClient;
+import atomic_broadcast.utils.InstanceInfo;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
@@ -22,8 +24,10 @@ public class AeronSequencerClient implements SequencerClient {
 
     private static final int PUBLICATION_TAG = 2;
 
+    private final InstanceInfo instanceInfo;
     private final AeronClient aeronClient;
     private final TransportParams params;
+    private final ConsensusStateHolder consensusState;
     private RecordingDescriptor latestRecording;
     private Subscription subscription;
     private Publication publication;
@@ -36,12 +40,7 @@ public class AeronSequencerClient implements SequencerClient {
             .endpoint(COMMAND_ENDPOINT)
             .build();
 
-    private final String publicationChannel = new ChannelUriStringBuilder()
-            .media(CommonContext.UDP_MEDIA)
-            .tags("1," + PUBLICATION_TAG)
-            .controlEndpoint(CONTROL_ENDPOINT) //change this to endpoint and remove control mode when using multicast
-            .controlMode(CommonContext.MDC_CONTROL_MODE_DYNAMIC)
-            .build();
+    private String publicationChannel;
 
     ChannelUriStringBuilder udpSubscriptionChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
@@ -55,10 +54,26 @@ public class AeronSequencerClient implements SequencerClient {
             .endpoint(DYNAMIC_ENDPOINT)
             .build();
 
-    public AeronSequencerClient(AeronClient aeronClient, TransportParams params, ClientSeqNumWriter seqNumWriter) {
+    public AeronSequencerClient(InstanceInfo instanceInfo,
+                                AeronClient aeronClient,
+                                TransportParams params,
+                                ConsensusStateHolder consensusState,
+                                ClientSeqNumWriter seqNumWriter) {
+        this.instanceInfo = instanceInfo;
         this.aeronClient = aeronClient;
         this.params = params;
+        this.consensusState = consensusState;
         this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(this, params.listeners(), seqNumWriter, params.instanceId()));
+        createEventStreamPublicationChannel();
+    }
+
+    private void createEventStreamPublicationChannel() {
+         publicationChannel = new ChannelUriStringBuilder()
+                .media(CommonContext.UDP_MEDIA)
+                .tags("1," + PUBLICATION_TAG)
+                .controlEndpoint(instanceInfo.hostname() + ":" + EVENT_STREAM_CONTROL_PORT) //change this to endpoint and remove control mode when using multicast
+                .controlMode(CommonContext.MDC_CONTROL_MODE_DYNAMIC)
+                .build();
     }
 
     @Override
@@ -86,7 +101,12 @@ public class AeronSequencerClient implements SequencerClient {
 
                 String liveDestination = new ChannelUriStringBuilder()
                         .media(CommonContext.UDP_MEDIA)
-                        .controlEndpoint(CONTROL_ENDPOINT)
+                        /**
+                         * need to know leader host name when replicate sequencer is replaying
+                         * from leader sequencer.
+                         * For multicast, this is not a problem.
+                         */
+                        .controlEndpoint(consensusState.getLeaderHostname() + ":" + EVENT_STREAM_CONTROL_PORT)
                         .endpoint(DYNAMIC_ENDPOINT)
                         .build();
 

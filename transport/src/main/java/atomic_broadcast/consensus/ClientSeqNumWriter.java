@@ -1,5 +1,5 @@
 package atomic_broadcast.consensus;
 
 public interface ClientSeqNumWriter {
-    void writeSeqNum(boolean isReady, int instance, long seqNo);
+    void writeSeqNum(int instance, long seqNo);
 }

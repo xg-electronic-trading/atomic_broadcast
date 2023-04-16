@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static atomic_broadcast.consensus.ClusterTransportState.Leader;
 import static org.junit.jupiter.api.Assertions.fail;
 import static utils.AsyncAssertions.pollUntil;
 
@@ -30,20 +31,32 @@ public class SequencerTestFixture {
         System.setProperty(CommonContext.DEBUG_TIMEOUT_PROP_NAME, "300s");
 
         for (int i = 0; i < numSequencers; i++) {
-            Host host = new Host(i);
+            Host host = new Host(i + 1);
             TransportParams clientParams = TestTransportParams.createClientParams();
             clientParams.withEventReader(eventReaderType);
 
             host.deployMediaDriver()
-                .deploySequencer(TestTransportParams.createSequencerParams().instance(i))
+                .deploySequencer(TestTransportParams.createSequencerParams().instance(i+1), TestTransportParams.createConsensusParams().instance(i+1))
                 .deployClient(clientParams, new EventPrinter());
 
             hosts.add(host);
         }
     }
 
+    public void setLeader(int instance) {
+        hosts.stream()
+                .filter(h -> h.hostNum() == instance)
+                .forEach(h -> {
+                    h.consensus().consensusState().setState(Leader);
+                    h.consensus().consensusState().setLeaderInstance(instance);
+                });
+    }
+
     public void start() {
         hosts.forEach(Host::start);
+    }
+
+    public void pollStandAloneSequencer() {
         hosts.forEach(h -> {
             pollSequencer(TransportState.PollCommandStream, h);
             pollPublisher(TransportState.ConnectedToCommandStream, h);
@@ -52,7 +65,7 @@ public class SequencerTestFixture {
     }
 
     public CommandPublisher cmdPublisher() {
-        Optional<Host> hostOpt = hosts.stream().filter(h -> h.hostNum() == 0).findFirst();
+        Optional<Host> hostOpt = hosts.stream().filter(h -> h.hostNum() == 1).findFirst();
         if (hostOpt.isPresent()) {
             return hostOpt.get().publisher().cmdPublisher();
         } else {

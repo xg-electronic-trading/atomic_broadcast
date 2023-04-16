@@ -1,6 +1,6 @@
 package atomic_broadcast.consensus;
 
-public class SeqNoClient implements SeqNoProvider, ClientSeqNumWriter {
+public class SeqNoClient implements ClientSeqNumWriter {
 
     private final ShmSeqNoClient shmClient;
 
@@ -9,12 +9,7 @@ public class SeqNoClient implements SeqNoProvider, ClientSeqNumWriter {
     }
 
     @Override
-    public SeqNumSnapshot takeSnapshot() {
-        return shmClient.readSeqNums();
-    }
-
-    @Override
-    public void writeSeqNum(boolean isReady, int instance, long seqNo) {
-        shmClient.writeSeqNum(isReady, instance, seqNo);
+    public void writeSeqNum(int instance, long seqNo) {
+        shmClient.writeSeqNum(instance, seqNo);
     }
 }

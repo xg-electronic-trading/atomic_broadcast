@@ -202,4 +202,24 @@
         </group>
     </sbe:message>
 
+    <sbe:message name="AppendEntries" id="200" description="sent by leader to follower as a heartbeat and for replicating log entries">
+        <field name="Term" id="1" type="uint64"/>
+        <field name="LeaderId" id="2" type="uint64"/>
+    </sbe:message>
+
+    <sbe:message name="RequestVote" id="201" description="invoked by candidates to gather votes">
+        <field name="Term" id="1" type="uint64"/>
+        <field name="CandidateId" id="2" type="uint64"/>
+        <field name="SeqNo" id="3" type="uint64"/>
+        <field name="LogPosition" id="4" type="uint64"/>
+    </sbe:message>
+
+    <sbe:message name="RequestVoteResponse" id="202" description="invoked by servers in response to request vote">
+        <field name="InstanceId" id="1" type="uint64"/>
+        <field name="Term" id="2" type="uint64"/>
+        <field name="VoteGranted" id="3" type="BooleanType"/>
+    </sbe:message>
+
+
+
 </sbe:messageSchema>

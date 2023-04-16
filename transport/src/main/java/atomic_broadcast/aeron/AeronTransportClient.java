@@ -68,6 +68,12 @@ public class AeronTransportClient implements TransportClient {
 
                     String liveDestination = new ChannelUriStringBuilder()
                             .media(CommonContext.UDP_MEDIA)
+                            /**
+                             * for MDC, we need to know the host that owns the event stream pub.
+                             * This can potentially come from the sourceIdentity on the
+                             * recording descriptor.
+                             * For multicast, this is not a problem.
+                             */
                             .controlEndpoint(CONTROL_ENDPOINT)
                             .endpoint(DYNAMIC_ENDPOINT)
                             .build();

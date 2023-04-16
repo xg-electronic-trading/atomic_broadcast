@@ -1,8 +1,7 @@
 package atomic_broadcast.sequencer;
 
 import atomic_broadcast.client.TransportWorker;
-import atomic_broadcast.consensus.SeqNoProvider;
-import atomic_broadcast.consensus.SeqNumSnapshot;
+import atomic_broadcast.consensus.ConsensusStateHolder;
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
 import com.epam.deltix.gflog.api.Log;
@@ -14,9 +13,9 @@ public class SequencerTransportWorker implements TransportWorker {
 
     private static final Log log = LogFactory.getLog(SequencerTransportWorker.class.getName());
 
+    private final ConsensusStateHolder consensusStateHolder;
     private final TransportParams params;
     private final SequencerClient transportClient;
-    private final SeqNoProvider seqNoProvider;
     private boolean active = false;
 
     private TransportState state = NoState;
@@ -24,10 +23,10 @@ public class SequencerTransportWorker implements TransportWorker {
     public SequencerTransportWorker(
             TransportParams params,
             SequencerClient transportClient,
-            SeqNoProvider seqNoProvider) {
+            ConsensusStateHolder consensusStateHolder) {
         this.params = params;
         this.transportClient = transportClient;
-        this.seqNoProvider = seqNoProvider;
+        this.consensusStateHolder = consensusStateHolder;
     }
 
     @Override
@@ -93,9 +92,8 @@ public class SequencerTransportWorker implements TransportWorker {
     }
 
     private void determineLeader() {
-        SeqNumSnapshot snapshot = seqNoProvider.takeSnapshot();
-        if(snapshot.isReady()) {
-            if (isLeader(snapshot)) {
+        if(consensusStateHolder.isLeaderAssigned()) {
+            if (consensusStateHolder.isLeader()) {
                 active = true;
                 setState(ConnectToJournalSource);
             } else {
@@ -174,9 +172,5 @@ public class SequencerTransportWorker implements TransportWorker {
             state = newState;
             log.info().append("new state: ").appendLast(state);
         }
-    }
-
-    private boolean isLeader(SeqNumSnapshot snapshot) {
-        return snapshot.leaderInstance() == params.instanceId();
     }
 }

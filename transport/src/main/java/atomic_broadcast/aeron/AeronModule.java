@@ -27,10 +27,14 @@ public class AeronModule implements Module {
     public static final String COMMAND_ENDPOINT = "localhost:40001";
     public static final String CONTROL_ENDPOINT = "localhost:40002";
     public static final String DYNAMIC_ENDPOINT = "localhost:0";
+    public static final String LOCAL_HOST = "localhost";
+    public static final int CONSENSUS_PORT_RANGE_START = 41000;
+    public static final int EVENT_STREAM_CONTROL_PORT = 40002;
+    public static final int ARCHIVE_REQUEST_PORT_RANGE_START = 8010;
     public static final int EVENT_STREAM_ID = 10_000_000;
     public static final int COMMAND_STREAM_ID = 20_000_000;
+    public static final int CONSENSUS_STREAM_ID = 30_000_000;
 
-    private Aeron aeron;
     private ArchivingMediaDriver archivingMediaDriver;
     private AeronParams params;
 
@@ -79,19 +83,12 @@ public class AeronModule implements Module {
 
 
         archivingMediaDriver = ArchivingMediaDriver.launch(ctx, archiveCtx);
-        log.info().appendLast("launched media driver");
-
-        aeron = Aeron.connect(
-                new Aeron.Context()
-                        .aeronDirectoryName(params.aeronDir()));
-
-        log.info().appendLast("connected to media driver");
+        log.info().append("launched media driver with request port: ").appendLast(params.archiveRequestPort());
     }
 
     @Override
     public void close() {
         CloseHelper.closeAll(
-                aeron,
                 archivingMediaDriver,
                 this::deletearchiveDir,
                 this::deleteMediaDriverDir);
