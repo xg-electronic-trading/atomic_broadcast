@@ -70,7 +70,6 @@ public class AeronSequencerClient implements SequencerClient {
     private void createEventStreamPublicationChannel() {
          publicationChannel = new ChannelUriStringBuilder()
                 .media(CommonContext.UDP_MEDIA)
-                .tags("1," + PUBLICATION_TAG)
                 .controlEndpoint(instanceInfo.hostname() + ":" + EVENT_STREAM_CONTROL_PORT) //change this to endpoint and remove control mode when using multicast
                 .controlMode(CommonContext.MDC_CONTROL_MODE_DYNAMIC)
                 .build();

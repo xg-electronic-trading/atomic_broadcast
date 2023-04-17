@@ -42,8 +42,6 @@ public class ReplayMergeFromReplicatedArchiveTest {
     public static final String DST_CONTROL_REQUEST_CHANNEL = "aeron:udp?endpoint=localhost:8015";
     public static final String CONTROL_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:0";
 
-    private static final int PUBLICATION_TAG = 2;
-
     /**
      * Note: controlEndpoint and controlMode set when running tests locally. This ensures
      * tests pub-sub using MDC when multicast is not available.
@@ -51,7 +49,6 @@ public class ReplayMergeFromReplicatedArchiveTest {
 
     private final String publicationChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
-            .tags("1," + PUBLICATION_TAG)
             .controlEndpoint(CONTROL_ENDPOINT) //change this to endpoint and remove control mode when using multicast
             .controlMode(CommonContext.MDC_CONTROL_MODE_DYNAMIC)
             .build();
@@ -65,12 +62,6 @@ public class ReplayMergeFromReplicatedArchiveTest {
     private final String replayDestination = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
             .endpoint(REPLAY_ENDPOINT)
-            .build();
-
-    private final String replayChannel = new ChannelUriStringBuilder()
-            .media(CommonContext.UDP_MEDIA)
-            .isSessionIdTagged(true)
-            .sessionId(PUBLICATION_TAG)
             .build();
 
 
@@ -196,6 +187,11 @@ public class ReplayMergeFromReplicatedArchiveTest {
             buffer.putLong(0, i);
             pub.offer(buffer, 0, Long.BYTES);
         }
+
+        final String replayChannel = new ChannelUriStringBuilder()
+                .media(CommonContext.UDP_MEDIA)
+                .sessionId(pub.sessionId())
+                .build();
 
          replayMerge(
                  recordingId,
