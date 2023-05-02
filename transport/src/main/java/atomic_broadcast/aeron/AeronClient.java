@@ -1,9 +1,7 @@
 package atomic_broadcast.aeron;
 
-import atomic_broadcast.utils.ConnectAs;
+import atomic_broadcast.utils.*;
 import atomic_broadcast.utils.Module;
-import atomic_broadcast.utils.ModuleName;
-import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import io.aeron.Aeron;
@@ -30,6 +28,7 @@ public class AeronClient implements Module {
     public static final String LOCAL_ENDPOINT = "aeron:udp?endpoint=localhost:";
     public static final String REMOTE_ENDPOINT = "aeron:udp?endpoint=somehost:";
 
+    private final InstanceInfo instanceInfo;
     private final AeronParams params;
     private Aeron aeron;
     private AeronArchive.AsyncConnect asyncConnect;
@@ -49,8 +48,9 @@ public class AeronClient implements Module {
         return AeronClient;
     }
 
-    public AeronClient(AeronParams params) {
+    public AeronClient(AeronParams params, InstanceInfo instanceInfo) {
         this.params = params;
+        this.instanceInfo = instanceInfo;
     }
 
     public void updatePrimaryEventSource(String host) {
@@ -180,6 +180,10 @@ public class AeronClient implements Module {
     }
 
     public Subscription addSubscription(String channel, int stream) {
+        log.info().append("app: ").append(instanceInfo.app())
+                .append(", instance: ").append(instanceInfo.instance())
+                .append(", adding subscription on channel-stream: ")
+                .append(channel).append("-").appendLast(stream);
         return aeron.addSubscription(channel, stream);
     }
 
@@ -190,10 +194,18 @@ public class AeronClient implements Module {
     }
 
     public Publication addPublication(String channel, int stream) {
+        log.info().append("app: ").append(instanceInfo.app())
+                .append(", instance: ").append(instanceInfo.instance())
+                .append(", adding publication on channel-stream: ")
+                .append(channel).append("-").appendLast(stream);
         return aeron.addPublication(channel, stream);
     }
 
     public Publication addExclusivePublication(String channel, int stream) {
+        log.info().append("app: ").append(instanceInfo.app())
+                .append(", instance: ").append(instanceInfo.instance())
+                .append(", adding exclusive publication on channel-stream: ")
+                .append(channel).append("-").appendLast(stream);
         return aeron.addExclusivePublication(channel, stream);
     }
 

@@ -1,16 +1,12 @@
 package atomic_broadcast.aeron;
 
 import atomic_broadcast.client.CommandPublisher;
-import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
-import io.aeron.ChannelUriStringBuilder;
-import io.aeron.CommonContext;
 import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
 
-import static atomic_broadcast.aeron.AeronModule.*;
 import static io.aeron.Publication.*;
 
 public class AeronPublisherClient implements CommandPublisher {
@@ -23,16 +19,18 @@ public class AeronPublisherClient implements CommandPublisher {
     private final BufferClaim bufferClaim = new BufferClaim();
 
     private final String publicationChannel;
+    private final int stream;
 
-    public AeronPublisherClient(AeronClient aeronClient, String publicationChannel) {
+    public AeronPublisherClient(AeronClient aeronClient, String publicationChannel, int stream) {
         this.aeronClient = aeronClient;
         this.publicationChannel = publicationChannel;
+        this.stream = stream;
     }
 
     @Override
     public boolean connectToCommandStream() {
         if (null == publication) {
-            publication = aeronClient.addPublication(publicationChannel, COMMAND_STREAM_ID);
+            publication = aeronClient.addPublication(publicationChannel, stream);
             return null != publication;
         } else {
             return true;

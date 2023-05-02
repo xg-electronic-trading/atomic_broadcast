@@ -8,15 +8,16 @@ import static atomic_broadcast.utils.ModuleName.ClientPublisher;
 public class ClientPublisherModule implements Module {
 
     private final CommandPublisher commandPublisher;
-
     private final TransportWorker transportSession;
 
-    public ClientPublisherModule(CommandPublisher commandPublisher, TransportParams params) {
+    public ClientPublisherModule(CommandPublisher commandPublisher,
+                                 TransportParams params,
+                                 InstanceInfo instanceInfo) {
         this.commandPublisher = commandPublisher;
         switch (params.connectAs()) {
             case ClusterClient:
             case Client:
-                transportSession = new ClientPublicationWorker(params, commandPublisher);
+                transportSession = new ClientPublicationWorker(params, commandPublisher, instanceInfo);
                 break;
             default:
                 throw new IllegalArgumentException("error: trying to connect as: " + params.connectAs());

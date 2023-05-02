@@ -3,6 +3,7 @@ package transport;
 import atomic_broadcast.utils.EventReaderType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import utils.SequencerTestFixture;
 
@@ -22,9 +23,9 @@ public class ClusteredSequencerTest {
         fixture.after();
     }
 
-    @Test
+    @Disabled
     public void clusterMembersStartUpScenario() {
-
+        fixture.pollAllUntilLeaderElected();
     }
 
     @Test

@@ -17,7 +17,8 @@ import time.RealClock;
 import java.util.ArrayList;
 import java.util.List;
 
-import static atomic_broadcast.aeron.AeronModule.ARCHIVE_REQUEST_PORT_RANGE_START;
+import static atomic_broadcast.aeron.AeronModule.*;
+import static atomic_broadcast.utils.App.AlgoContainer;
 import static atomic_broadcast.utils.App.Sequencer;
 
 public class Host {
@@ -65,27 +66,29 @@ public class Host {
         List<CommandPublisher> cmdPublishers = new ArrayList<>(20);
         for (int i = 0; i < members.size(); i++) {
             if (instanceInfo.instance() != members.get(i).instance()) {
-                cmdPublishers.add(new AeronPublisherClient(aeronClient, members.get(i).publicationChannel()));
+                cmdPublishers.add(new AeronPublisherClient(aeronClient, members.get(i).publicationChannel(), CONSENSUS_STREAM_ID));
             }
         }
 
         return cmdPublishers;
     }
     
-    private List<CommandProcessor> createCommandProcessors(List<CommandPublisher> cmdPublishers) {
+    private List<CommandProcessor> createCommandProcessors(List<CommandPublisher> cmdPublishers, InstanceInfo instanceInfo) {
         List<CommandProcessor> cmdProcessors = new ArrayList<>(20);
         for (int i = 0; i < cmdPublishers.size(); i++) {
-            CommandProcessor cmdProcessor = new CommandProcessorImpl(cmdPublishers.get(i), new NoOpCommandValidator());
+            CommandProcessor cmdProcessor = new CommandProcessorImpl(cmdPublishers.get(i), new NoOpCommandValidator(), instanceInfo);
             cmdProcessors.add(cmdProcessor);
         }
 
         return cmdProcessors;
     }
 
-    private void createAndAddPublisherModules(List<CommandPublisher> cmdPublishers, TransportParams transportParams) {
+    private void createAndAddPublisherModules(List<CommandPublisher> cmdPublishers,
+                                              TransportParams transportParams,
+                                              InstanceInfo instanceInfo) {
         List<ClientPublisherModule> publisherModules = new ArrayList<>(20);
         for (int i = 0; i < cmdPublishers.size(); i++) {
-            publisherModules.add(new ClientPublisherModule(cmdPublishers.get(i), transportParams));
+            publisherModules.add(new ClientPublisherModule(cmdPublishers.get(i), transportParams, instanceInfo));
             pollables.add(publisherModules.get(i).transport());
             modules.add(publisherModules.get(i));
         }
@@ -93,24 +96,24 @@ public class Host {
 
     public Host deploySequencer(TransportParams sequencerParams, TransportParams consensusParams) {
         InstanceInfo instanceInfo = new InstanceInfo(Sequencer, "localhost", sequencerParams.instanceId());
-        AeronClient consensusAeronClient = new AeronClient(params);
+        AeronClient consensusAeronClient = new AeronClient(params, instanceInfo);
 
-        ConsensusStateHolder consensusStateHolder = new ConsensusStateHolder();
+        ConsensusStateHolder consensusStateHolder = new ConsensusStateHolder(instanceInfo);
         List<CommandPublisher> cmdPublishers = createConsensusPublishers(instanceInfo, clusterMembers, consensusAeronClient);
-        List<CommandProcessor> cmdProcessors = createCommandProcessors(cmdPublishers);
+        List<CommandProcessor> cmdProcessors = createCommandProcessors(cmdPublishers, instanceInfo);
         consensusParams.addListener(new ConsensusEventListener(clock, consensusStateHolder, clusterMembers.get(hostNum - 1), cmdProcessors));
-        createAndAddPublisherModules(cmdPublishers, consensusParams);
+        createAndAddPublisherModules(cmdPublishers, consensusParams, instanceInfo);
 
-        ConsensusTransportClient consensusTransportClient = new RaftAeronConsensusClient(instanceInfo, clock, consensusAeronClient, clusterMembers, cmdProcessors, consensusParams);
-        consensus = new ConsensusModule(consensusTransportClient, consensusStateHolder);
+        ConsensusTransportClient consensusTransportClient = new RaftAeronConsensusClient(instanceInfo, clock, consensusAeronClient, clusterMembers, cmdProcessors, consensusParams, 5);
+        consensus = new ConsensusModule(consensusTransportClient, consensusStateHolder, instanceInfo);
         pollables.add(consensus.transport());
         modules.add(consensusAeronClient);
         modules.add(consensus);
 
-        AeronClient aeronClient = new AeronClient(params);
+        AeronClient aeronClient = new AeronClient(params, instanceInfo);
         SeqNoClient seqNoClient = new SeqNoClient(new ShmSeqNoClient(sequencerParams.instanceId()));
         SequencerClient sequencerClient = new AeronSequencerClient(instanceInfo, aeronClient, sequencerParams, consensusStateHolder, seqNoClient);
-        sequencer = new SequencerModule(sequencerParams, sequencerClient, consensusStateHolder);
+        sequencer = new SequencerModule(sequencerParams, sequencerClient, consensusStateHolder, instanceInfo);
         pollables.add(sequencer.transport());
         modules.add(aeronClient);
         modules.add(sequencer);
@@ -118,11 +121,12 @@ public class Host {
     }
 
     public Host deployClient(TransportParams transportParams, MessageListener listener) {
-        AeronClient aeronClient = new AeronClient(params);
+        InstanceInfo instanceInfo = new InstanceInfo(AlgoContainer, "localhost", transportParams.instanceId());
+        AeronClient aeronClient = new AeronClient(params, instanceInfo);
         TransportClient transportClient = new AeronTransportClient(aeronClient, transportParams);
-        CommandPublisher cmdPublisher = new AeronPublisherClient(aeronClient, transportParams.publicationChannel());
-        eventbus = new EventReaderModule(transportClient, transportParams, listener);
-        publisher = new ClientPublisherModule(cmdPublisher, transportParams);
+        CommandPublisher cmdPublisher = new AeronPublisherClient(aeronClient, transportParams.publicationChannel(), COMMAND_STREAM_ID);
+        eventbus = new EventReaderModule(transportClient, transportParams, listener, instanceInfo);
+        publisher = new ClientPublisherModule(cmdPublisher, transportParams, instanceInfo);
         pollables.add(eventbus.transport());
         pollables.add(eventbus.eventsReader());
         pollables.add(publisher.transport());

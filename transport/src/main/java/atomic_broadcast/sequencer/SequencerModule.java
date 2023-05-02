@@ -13,10 +13,11 @@ public class SequencerModule implements Module {
     public SequencerModule(
             TransportParams params,
             SequencerClient transport,
-            ConsensusStateHolder consensusStateHolder) {
+            ConsensusStateHolder consensusStateHolder,
+            InstanceInfo instanceInfo) {
         switch (params.connectAs()) {
             case Sequencer:
-                this.transportSession = new SequencerTransportWorker(params, transport, consensusStateHolder);
+                this.transportSession = new SequencerTransportWorker(params, transport, consensusStateHolder, instanceInfo);
                 break;
             default:
                 throw new IllegalArgumentException("error: trying to connect as: " + params.connectAs());

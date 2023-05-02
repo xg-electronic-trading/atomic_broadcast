@@ -8,6 +8,8 @@ import atomic_broadcast.utils.Action;
 import atomic_broadcast.utils.BoundedRandomNumberGenerator;
 import atomic_broadcast.utils.InstanceInfo;
 import atomic_broadcast.utils.TransportParams;
+import com.epam.deltix.gflog.api.Log;
+import com.epam.deltix.gflog.api.LogFactory;
 import command.*;
 import io.aeron.FragmentAssembler;
 import io.aeron.Subscription;
@@ -21,6 +23,8 @@ import static atomic_broadcast.aeron.AeronModule.CONSENSUS_STREAM_ID;
 import static atomic_broadcast.utils.Action.CommandSent;
 
 public class RaftAeronConsensusClient implements ConsensusTransportClient {
+
+    private final Log log = LogFactory.getLog(this.getClass().getName());
 
     private final InstanceInfo instanceInfo;
     private final Clock clock;
@@ -41,7 +45,8 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
                                     AeronClient aeronClient,
                                     List<ClusterMember> clusterMembers,
                                     List<CommandProcessor> cmdProcessors,
-                                    TransportParams consensusParams
+                                    TransportParams consensusParams,
+                                    int electionTimeoutSeconds
     ) {
         this.instanceInfo = instanceInfo;
         this.clock = clock;
@@ -52,10 +57,13 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
         this.delegateHandler = new AeronConsensusFragmentHandler(consensusParams.listeners());
         this.fragmentHandler = new FragmentAssembler(delegateHandler);
         this.randomNumberGenerator = new BoundedRandomNumberGenerator(
-                TimeUnit.SECONDS.toMillis(20),
-                TimeUnit.SECONDS.toMillis(30),
-                TimeUnit.SECONDS.toMillis(40));
+                TimeUnit.SECONDS.toMillis(electionTimeoutSeconds)
+        );
         this.randomOffset = randomNumberGenerator.generateRandom();
+
+        log.info().append("app: ").append(instanceInfo.app())
+                .append(", instance: ").append(instanceInfo.instance())
+                .append(", election timeout millis: ").appendLast(randomOffset);
     }
 
     public void initialiseConsensusSubscription() {
@@ -85,7 +93,13 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
             MessageListener listener = consensusParams.listeners().get(i);
             if (listener instanceof ConsensusEventListener) {
                 ConsensusEventListener consensusEventListener = (ConsensusEventListener) listener;
-                if (isMessageOlderThanTimeout(consensusEventListener.lastMessageReceivedMillis(), clock.time() - randomOffset)) {
+                long expireTime = clock.time() - randomOffset;
+                if (isMessageOlderThanTimeout(consensusEventListener.lastMessageReceivedMillis(), expireTime)) {
+                    log.info().append("app: ").append(instanceInfo.app())
+                            .append(", instance: ").append(instanceInfo.instance())
+                            .append(", lastMessageReceivedMillis: ").append(consensusEventListener.lastMessageReceivedMillis())
+                            .append(", expireTime: ").append(expireTime)
+                            .append(", timeout expired: ").appendLast(true);
                     return true;
                 }
             }
@@ -103,7 +117,7 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
             MessageListener listener = consensusParams.listeners().get(i);
             if (listener instanceof ConsensusEventListener) {
                 ConsensusEventListener consensusEventListener = (ConsensusEventListener) listener;
-                consensusEventListener.updateLastMessafeReceivedMillis();;
+                consensusEventListener.updateLastMessageReceivedMillis();
             }
         }
     }

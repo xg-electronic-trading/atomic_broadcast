@@ -1,5 +1,6 @@
 package atomic_broadcast.consensus;
 
+import atomic_broadcast.utils.InstanceInfo;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 
@@ -7,12 +8,17 @@ import static atomic_broadcast.consensus.ClusterTransportState.*;
 
 public class ConsensusStateHolder {
 
-    private static final Log log = LogFactory.getLog(ConsensusStateHolder.class.getName());
+    private final Log log = LogFactory.getLog(this.getClass().getName());
 
+    private final InstanceInfo instanceInfo;
     private ClusterTransportState state;
     private String leaderHostname = "localhost";
     private boolean requestedVote;
     private int leaderInstance = -1;
+
+    public ConsensusStateHolder(InstanceInfo instanceInfo) {
+        this.instanceInfo = instanceInfo;
+    }
 
     public void setLeaderHostname(String leaderHostname) { this.leaderHostname = leaderHostname; }
 
@@ -25,7 +31,9 @@ public class ConsensusStateHolder {
     public void setState(ClusterTransportState newState) {
         if (this.state != newState) {
             state = newState;
-            log.info().append("new state: ").appendLast(state);
+            log.info().append("app: ").append(instanceInfo.app())
+                    .append(", instance: ").append(instanceInfo.instance())
+                    .append(", new state: ").appendLast(state);
         }
     }
 

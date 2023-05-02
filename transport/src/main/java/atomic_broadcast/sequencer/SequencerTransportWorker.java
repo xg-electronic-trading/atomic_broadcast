@@ -2,6 +2,7 @@ package atomic_broadcast.sequencer;
 
 import atomic_broadcast.client.TransportWorker;
 import atomic_broadcast.consensus.ConsensusStateHolder;
+import atomic_broadcast.utils.InstanceInfo;
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
 import com.epam.deltix.gflog.api.Log;
@@ -11,8 +12,9 @@ import static atomic_broadcast.utils.TransportState.*;
 
 public class SequencerTransportWorker implements TransportWorker {
 
-    private static final Log log = LogFactory.getLog(SequencerTransportWorker.class.getName());
+    private final Log log = LogFactory.getLog(SequencerTransportWorker.class.getName());
 
+    private final InstanceInfo instanceInfo;
     private final ConsensusStateHolder consensusStateHolder;
     private final TransportParams params;
     private final SequencerClient transportClient;
@@ -23,10 +25,12 @@ public class SequencerTransportWorker implements TransportWorker {
     public SequencerTransportWorker(
             TransportParams params,
             SequencerClient transportClient,
-            ConsensusStateHolder consensusStateHolder) {
+            ConsensusStateHolder consensusStateHolder,
+            InstanceInfo instanceInfo) {
         this.params = params;
         this.transportClient = transportClient;
         this.consensusStateHolder = consensusStateHolder;
+        this.instanceInfo = instanceInfo;
     }
 
     @Override
@@ -170,7 +174,9 @@ public class SequencerTransportWorker implements TransportWorker {
     private void setState(TransportState newState) {
         if (this.state != newState) {
             state = newState;
-            log.info().append("new state: ").appendLast(state);
+            log.info().append("app: ").append(instanceInfo.app())
+                    .append(", instance: ").append(instanceInfo.instance())
+                    .append(", new state: ").appendLast(state);
         }
     }
 }

@@ -30,4 +30,8 @@ public class RequestVoteResponseImpl implements RequestVoteResponse {
     public boolean voteGranted() {
         return decoder.voteGranted() == BooleanType.T;
     }
+
+    public String toString() {
+        return decoder.toString();
+    }
 }

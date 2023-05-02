@@ -41,7 +41,7 @@ public class ConsensusEventListener implements MessageListener {
         return lastMessageReceivedMillis;
     }
 
-    public void updateLastMessafeReceivedMillis() {
+    public void updateLastMessageReceivedMillis() {
         lastMessageReceivedMillis = clock.time();
     }
 
@@ -50,13 +50,19 @@ public class ConsensusEventListener implements MessageListener {
         switch (packet.messageType()) {
             case AppendEntries:
                 appendEntries.init(packet);
+                printEvent(appendEntries);
                 handleAppendEntries(appendEntries);
+                break;
             case RequestVote:
                 requestVote.init(packet);
+                printEvent(requestVote);
                 handleRequestVote(requestVote);
+                break;
             case RequestVoteResponse:
                 requestVoteResponse.init(packet);
+                printEvent(requestVoteResponse);
                 handleRequestVoteResponse(requestVoteResponse);
+                break;
             default:
                 throw new IllegalArgumentException("unknown packet message type: " + packet.messageType());
         }
@@ -96,5 +102,11 @@ public class ConsensusEventListener implements MessageListener {
 
     private void handleRequestVoteResponse(RequestVoteResponse requestVoteResponse) {
 
+    }
+
+    private void printEvent(Object object) {
+        if (log.isDebugEnabled()) {
+            log.debug().appendLast(object.toString());
+        }
     }
 }

@@ -6,6 +6,7 @@ import atomic_broadcast.client.CommandPublisher;
 import atomic_broadcast.client.NoOpCommandValidator;
 import atomic_broadcast.utils.Action;
 import atomic_broadcast.utils.EventReaderType;
+import atomic_broadcast.utils.InstanceInfo;
 import com.messages.sbe.OrdTypeEnum;
 import com.messages.sbe.SideEnum;
 import com.messages.sbe.StrategyEnum;
@@ -19,6 +20,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import utils.SequencerTestFixture;
 
 import static atomic_broadcast.utils.Action.CommandSent;
+import static atomic_broadcast.utils.App.AlgoContainer;
 
 public class SingleHostSequencerRoundTripTest {
 
@@ -42,7 +44,7 @@ public class SingleHostSequencerRoundTripTest {
          * sequencer.
          */
         CommandPublisher cmdPublisher = fixture.cmdPublisher();
-        CommandProcessor cmdProcessor = new CommandProcessorImpl(cmdPublisher, new NoOpCommandValidator());
+        CommandProcessor cmdProcessor = new CommandProcessorImpl(cmdPublisher, new NoOpCommandValidator(), new InstanceInfo(AlgoContainer, "localhost", 1));
         CommandBuilder cmdBuilder = new CommandBuilderImpl();
         NewOrderSingleCommandImpl nos = cmdBuilder.createNewOrderSingle();
         long id = 1;

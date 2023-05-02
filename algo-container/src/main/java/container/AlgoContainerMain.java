@@ -23,6 +23,7 @@ import validator.AlgoCommandValidator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static atomic_broadcast.aeron.AeronModule.ARCHIVE_REQUEST_PORT_RANGE_START;
+import static atomic_broadcast.utils.App.AlgoContainer;
 
 public class AlgoContainerMain {
 
@@ -53,6 +54,7 @@ public class AlgoContainerMain {
             MarketDataHandler marketDataHandler,
             CommandValidator commandValidator
     ) {
+        InstanceInfo instanceInfo = new InstanceInfo(AlgoContainer, "localhost", 1);
         AtomicBoolean isReady = new AtomicBoolean();
         String aeronDir = IoUtil.tmpDirName()+"/"+"aeron";
         log.info().append("using aeron dir: ").appendLast(aeronDir);
@@ -71,9 +73,9 @@ public class AlgoContainerMain {
                 .aeronDir(aeronDir)
                 .lowLatencyMode(false);
 
-        AeronClient aeronClient = new AeronClient(params);
+        AeronClient aeronClient = new AeronClient(params, instanceInfo);
         TransportClient transportClient = new AeronTransportClient(aeronClient, clientParams);
-        EventReaderModule eventbus = new EventReaderModule(transportClient, clientParams, eventListener);
+        EventReaderModule eventbus = new EventReaderModule(transportClient, clientParams, eventListener, instanceInfo);
         modules.add(aeronClient);
         modules.add(eventbus);
 

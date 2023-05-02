@@ -3,6 +3,7 @@ package utils;
 import atomic_broadcast.client.ClientPublisherModule;
 import atomic_broadcast.client.CommandPublisher;
 import atomic_broadcast.client.EventReaderModule;
+import atomic_broadcast.consensus.ConsensusModule;
 import atomic_broadcast.host.Host;
 import atomic_broadcast.sequencer.SequencerModule;
 import atomic_broadcast.utils.*;
@@ -11,9 +12,8 @@ import io.aeron.CommonContext;
 import listener.EventPrinter;
 import org.junit.jupiter.api.AfterEach;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static atomic_broadcast.consensus.ClusterTransportState.Leader;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -33,7 +33,7 @@ public class SequencerTestFixture {
         for (int i = 0; i < numSequencers; i++) {
             Host host = new Host(i + 1);
             TransportParams clientParams = TestTransportParams.createClientParams();
-            clientParams.withEventReader(eventReaderType);
+            clientParams.withEventReader(eventReaderType).instance(i+1);
 
             host.deployMediaDriver()
                 .deploySequencer(TestTransportParams.createSequencerParams().instance(i+1), TestTransportParams.createConsensusParams().instance(i+1))
@@ -64,6 +64,25 @@ public class SequencerTestFixture {
         });
     }
 
+    public void pollAllUntilLeaderElected() {
+        List<Pollable> allPollables = hosts.stream()
+                .flatMap(hosts -> hosts.pollables().stream())
+                .collect(Collectors.toList());
+
+        List<Module> allModules = hosts.stream()
+                .flatMap(host -> host.moduleList().stream())
+                .collect(Collectors.toList());
+
+        pollUntil(allPollables, () -> {
+            Module module = findModule(ModuleName.Consensus, allModules);
+            if (module instanceof ConsensusModule) {
+                ConsensusModule consensus = (ConsensusModule) module;
+                return consensus.consensusState().isLeader();
+            }
+            return false;
+        });
+    }
+
     public CommandPublisher cmdPublisher() {
         Optional<Host> hostOpt = hosts.stream().filter(h -> h.hostNum() == 1).findFirst();
         if (hostOpt.isPresent()) {
@@ -77,8 +96,8 @@ public class SequencerTestFixture {
         return host.publisher().cmdPublisher();
     }
 
-    public Module findModule(ModuleName name, Host host) {
-        Optional<Module> modOpt = host.moduleList()
+    private Module findModule(ModuleName name, List<Module> modules) {
+        Optional<Module> modOpt = modules
                 .stream()
                 .filter(m -> m.name() == name)
                 .findFirst();
@@ -89,7 +108,11 @@ public class SequencerTestFixture {
         }
     }
 
-    public void pollSequencer(TransportState expected, Host host) {
+    public Module findModule(ModuleName name, Host host) {
+        return findModule(name, host.moduleList());
+    }
+
+    private void pollSequencer(TransportState expected, Host host) {
         Module module = findModule(ModuleName.Sequencer, host);
         if (module instanceof SequencerModule) {
             SequencerModule seq = (SequencerModule) module;
@@ -97,7 +120,7 @@ public class SequencerTestFixture {
         }
     }
 
-    public void pollClientTransport(TransportState expected, Host host) {
+    private void pollClientTransport(TransportState expected, Host host) {
         Module module = findModule(ModuleName.ClientTransport, host);
         if (module instanceof EventReaderModule) {
             EventReaderModule eventBus = (EventReaderModule) module;
@@ -124,7 +147,7 @@ public class SequencerTestFixture {
         }
     }
 
-    public void pollPublisher(TransportState expected, Host host) {
+    private void pollPublisher(TransportState expected, Host host) {
         Module module = findModule(ModuleName.ClientPublisher, host);
         if(module instanceof ClientPublisherModule) {
             ClientPublisherModule publisher = (ClientPublisherModule) module;

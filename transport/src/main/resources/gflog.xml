@@ -3,7 +3,7 @@
         <layout template="%d %p '%c' [%t]: %m%n"/>
     </appender>
 
-    <logger level="INFO">
+    <logger level="DEBUG">
         <appender-ref ref="console"/>
     </logger>
 

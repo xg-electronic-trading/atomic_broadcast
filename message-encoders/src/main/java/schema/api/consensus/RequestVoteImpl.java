@@ -33,4 +33,8 @@ public class RequestVoteImpl implements RequestVote {
     public long logPosition() {
         return decoder.logPosition();
     }
+
+    public String toString() {
+        return decoder.toString();
+    }
 }

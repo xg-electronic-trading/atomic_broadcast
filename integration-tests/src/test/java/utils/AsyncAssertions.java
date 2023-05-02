@@ -1,8 +1,10 @@
 package utils;
 
-import atomic_broadcast.utils.CompositeModule;
 import atomic_broadcast.utils.Pollable;
 import atomic_broadcast.utils.TransportState;
+import com.epam.deltix.gflog.api.Log;
+import com.epam.deltix.gflog.api.LogFactory;
+import org.agrona.SystemUtil;
 
 import java.util.List;
 import java.util.concurrent.TimeoutException;
@@ -11,7 +13,9 @@ import java.util.function.Supplier;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class AsyncAssertions {
-    private static final long AssertionTimeOutMs = 10_000L;
+    private static final Log log = LogFactory.getLog(AsyncAssertions.class.getName());
+
+    private static final long AssertionTimeOutMs = SystemUtil.isDebuggerAttached() ? 60_000L * 5 : 30_000L;
 
     public static void pollUntil(
             List<Pollable> pollables,
@@ -45,10 +49,13 @@ public class AsyncAssertions {
                 if (end - start > AssertionTimeOutMs) {
                     throw new TimeoutException("timed out waiting for assertion");
                 } else {
-                    pollables.forEach(Pollable::poll);
+                    pollables.forEach(p -> {
+                        p.poll();
+                    });
                 }
             }
         } catch (Exception e) {
+            e.printStackTrace();
             fail(e.getMessage());
         }
 

@@ -23,4 +23,8 @@ public class AppendEntriesImpl implements AppendEntries {
     public long leaderId() {
         return decoder.leaderId();
     }
+
+    public String toString() {
+        return decoder.toString();
+    }
 }

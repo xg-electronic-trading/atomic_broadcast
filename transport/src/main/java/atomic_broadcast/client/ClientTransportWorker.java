@@ -1,5 +1,6 @@
 package atomic_broadcast.client;
 
+import atomic_broadcast.utils.InstanceInfo;
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
 import com.epam.deltix.gflog.api.Log;
@@ -9,15 +10,19 @@ import static atomic_broadcast.utils.TransportState.*;
 
 public class ClientTransportWorker implements TransportWorker {
 
-    private static final Log log = LogFactory.getLog(ClientTransportWorker.class.getName());
+    private final Log log = LogFactory.getLog(ClientTransportWorker.class.getName());
 
+    private final InstanceInfo instanceInfo;
     private final TransportParams params;
     private final TransportClient transportClient;
     private TransportState state = NoState;
 
-    public ClientTransportWorker(TransportParams params, TransportClient transportClient) {
+    public ClientTransportWorker(TransportParams params,
+                                 TransportClient transportClient,
+                                 InstanceInfo instanceInfo) {
         this.params = params;
         this.transportClient = transportClient;
+        this.instanceInfo = instanceInfo;
     }
 
     @Override
@@ -105,7 +110,9 @@ public class ClientTransportWorker implements TransportWorker {
     private void  setState(TransportState newState) {
         if (this.state != newState) {
             state = newState;
-            log.info().append("new state: ").appendLast(state);
+            log.info().append("app: ").append(instanceInfo.app())
+                    .append(", instance: ").append(instanceInfo.instance())
+                    .append(", new state: ").appendLast(state);
         }
     }
 }

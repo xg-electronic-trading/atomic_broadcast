@@ -1,6 +1,7 @@
 package atomic_broadcast.consensus;
 
 import atomic_broadcast.client.TransportWorker;
+import atomic_broadcast.utils.InstanceInfo;
 import atomic_broadcast.utils.TransportState;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
@@ -10,16 +11,19 @@ import static atomic_broadcast.consensus.ClusterTransportState.Follower;
 
 public class ConsensusWorker implements TransportWorker {
 
-    private static final Log log = LogFactory.getLog(ConsensusWorker.class.getName());
+    private final Log log = LogFactory.getLog(this.getClass().getName());
 
     private final ConsensusTransportClient consensusTransport;
     private final ConsensusStateHolder consensusStateHolder;
+    private final InstanceInfo instanceInfo;
     private boolean requestedVote = false;
 
     public ConsensusWorker(ConsensusTransportClient consensusTransport,
-                           ConsensusStateHolder consensusStateHolder) {
+                           ConsensusStateHolder consensusStateHolder,
+                           InstanceInfo instanceInfo) {
         this.consensusTransport = consensusTransport;
         this.consensusStateHolder = consensusStateHolder;
+        this.instanceInfo = instanceInfo;
     }
 
     @Override

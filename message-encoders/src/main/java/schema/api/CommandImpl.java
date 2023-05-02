@@ -36,4 +36,9 @@ public abstract class CommandImpl implements Command {
     public int encodedLength() {
        return encoder.encodedLength();
     }
+
+    @Override
+    public String toString() {
+        return encoder.toString();
+    }
 }

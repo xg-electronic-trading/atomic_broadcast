@@ -16,14 +16,20 @@ import static atomic_broadcast.utils.ModuleName.ClientTransport;
 
 public class EventReaderModule implements Module {
 
+    private final InstanceInfo instanceInfo;
     private final TransportParams params;
     private final MessageListener listener;
     private final TransportWorker transportSession;
     private RingBufferEventsReader eventsFromRingBufferReader;
 
-    public EventReaderModule(TransportClient transportClient, TransportParams params, MessageListener listener) {
+    public EventReaderModule(TransportClient transportClient,
+                             TransportParams params,
+                             MessageListener listener,
+                             InstanceInfo instanceInfo) {
         this.params = params;
         this.listener = listener;
+        this.instanceInfo = instanceInfo;
+
         switch (params.connectAs()) {
             case Client:
                 if (params.eventReaderType() == EventReaderType.Direct) {
@@ -38,7 +44,7 @@ public class EventReaderModule implements Module {
                     params.addListener(eventsToRingBufferWriter);
                 }
 
-                transportSession = new ClientTransportWorker(params, transportClient);
+                transportSession = new ClientTransportWorker(params, transportClient, instanceInfo);
                 break;
             default:
                 throw new IllegalArgumentException("error: trying to connect as: " + params.connectAs());
