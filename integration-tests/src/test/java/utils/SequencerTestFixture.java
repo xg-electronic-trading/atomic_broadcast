@@ -10,12 +10,16 @@ import atomic_broadcast.utils.*;
 import atomic_broadcast.utils.Module;
 import io.aeron.CommonContext;
 import listener.EventPrinter;
+import org.agrona.IoUtil;
 import org.junit.jupiter.api.AfterEach;
 
+import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static atomic_broadcast.consensus.ClusterTransportState.Leader;
+import static atomic_broadcast.utils.ShmFileConstants.SEQ_NUM_FILE_PREFIX;
+import static atomic_broadcast.utils.ShmFileConstants.SHM_SUFFIX;
 import static org.junit.jupiter.api.Assertions.fail;
 import static utils.AsyncAssertions.pollUntil;
 
@@ -31,12 +35,14 @@ public class SequencerTestFixture {
         System.setProperty(CommonContext.DEBUG_TIMEOUT_PROP_NAME, "300s");
 
         for (int i = 0; i < numSequencers; i++) {
-            Host host = new Host(i + 1);
+            int instance = i + 1;
+            IoUtil.delete(new File(SEQ_NUM_FILE_PREFIX + instance + SHM_SUFFIX), false);
+            Host host = new Host(instance);
             TransportParams clientParams = TestTransportParams.createClientParams();
-            clientParams.withEventReader(eventReaderType).instance(i+1);
+            clientParams.withEventReader(eventReaderType).instance(instance);
 
             host.deployMediaDriver()
-                .deploySequencer(TestTransportParams.createSequencerParams().instance(i+1), TestTransportParams.createConsensusParams().instance(i+1))
+                .deploySequencer(TestTransportParams.createSequencerParams().instance(instance), TestTransportParams.createConsensusParams().instance(instance))
                 .deployClient(clientParams, new EventPrinter());
 
             hosts.add(host);

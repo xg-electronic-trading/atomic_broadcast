@@ -11,11 +11,14 @@ import atomic_broadcast.utils.Module;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import org.agrona.IoUtil;
+import org.agrona.collections.Long2ObjectHashMap;
 import time.Clock;
 import time.RealClock;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static atomic_broadcast.aeron.AeronModule.*;
 import static atomic_broadcast.utils.App.AlgoContainer;
@@ -28,7 +31,7 @@ public class Host {
     private int hostNum;
     private CompositeModule modules;
     private List<Pollable> pollables;
-    private final List<ClusterMember> clusterMembers;
+    private final Long2ObjectHashMap<ClusterMember> clusterMembers;
     private AeronModule mediaDriver;
     private SequencerModule sequencer;
     private ConsensusModule consensus;
@@ -43,10 +46,10 @@ public class Host {
 
         this.hostNum = hostNum;
         this.pollables = new ArrayList<>(20);
-        this.clusterMembers = new ArrayList<>(20);
-        this.clusterMembers.add(new ClusterMember(Sequencer, 1));
-        this.clusterMembers.add(new ClusterMember(Sequencer, 2));
-        this.clusterMembers.add(new ClusterMember(Sequencer, 3));
+        this.clusterMembers = new Long2ObjectHashMap<>(20, 0.65f, true);
+        this.clusterMembers.put(1, new ClusterMember(Sequencer, 1));
+        this.clusterMembers.put(2, new ClusterMember(Sequencer, 2));
+        this.clusterMembers.put(3, new ClusterMember(Sequencer, 3));
         this.clock = new RealClock();
         this.modules = new CompositeModule();
         this.params = new AeronParams()
@@ -62,56 +65,76 @@ public class Host {
         return this;
     }
 
-    private List<CommandPublisher> createConsensusPublishers(InstanceInfo instanceInfo, List<ClusterMember> members, AeronClient aeronClient) {
-        List<CommandPublisher> cmdPublishers = new ArrayList<>(20);
-        for (int i = 0; i < members.size(); i++) {
-            if (instanceInfo.instance() != members.get(i).instance()) {
-                cmdPublishers.add(new AeronPublisherClient(aeronClient, members.get(i).publicationChannel(), CONSENSUS_STREAM_ID));
+    private Long2ObjectHashMap<CommandPublisher> createConsensusPublishers(InstanceInfo instanceInfo, Long2ObjectHashMap<ClusterMember> members, AeronClient aeronClient) {
+        Long2ObjectHashMap<CommandPublisher> cmdPublishers = new Long2ObjectHashMap<>(20, 0.65f, true);
+
+        for (ClusterMember member : members.values()) {
+            if (instanceInfo.instance() != member.instance()) {
+                cmdPublishers.put(member.instance(), new AeronPublisherClient(aeronClient, member.publicationChannel(), CONSENSUS_STREAM_ID));
             }
         }
 
         return cmdPublishers;
     }
     
-    private List<CommandProcessor> createCommandProcessors(List<CommandPublisher> cmdPublishers, InstanceInfo instanceInfo) {
-        List<CommandProcessor> cmdProcessors = new ArrayList<>(20);
-        for (int i = 0; i < cmdPublishers.size(); i++) {
-            CommandProcessor cmdProcessor = new CommandProcessorImpl(cmdPublishers.get(i), new NoOpCommandValidator(), instanceInfo);
-            cmdProcessors.add(cmdProcessor);
+    private Long2ObjectHashMap<CommandProcessor> createCommandProcessors(Long2ObjectHashMap<CommandPublisher> cmdPublishers, InstanceInfo instanceInfo) {
+        Long2ObjectHashMap<CommandProcessor> cmdProcessors = new Long2ObjectHashMap<>(20, 0.65f, true);
+        Long2ObjectHashMap<CommandPublisher>.EntryIterator itr = cmdPublishers.entrySet().iterator();
+
+        while (itr.hasNext()) {
+            Map.Entry<Long, CommandPublisher> entry = itr.next();
+            CommandProcessor cmdProcessor = new CommandProcessorImpl(entry.getValue(), new NoOpCommandValidator(), instanceInfo);
+            cmdProcessors.put(entry.getKey(), cmdProcessor);
         }
 
         return cmdProcessors;
     }
 
-    private void createAndAddPublisherModules(List<CommandPublisher> cmdPublishers,
+    private void createAndAddPublisherModules(Long2ObjectHashMap<CommandPublisher> cmdPublishers,
                                               TransportParams transportParams,
                                               InstanceInfo instanceInfo) {
-        List<ClientPublisherModule> publisherModules = new ArrayList<>(20);
-        for (int i = 0; i < cmdPublishers.size(); i++) {
-            publisherModules.add(new ClientPublisherModule(cmdPublishers.get(i), transportParams, instanceInfo));
-            pollables.add(publisherModules.get(i).transport());
-            modules.add(publisherModules.get(i));
+        Long2ObjectHashMap<CommandPublisher>.ValueIterator itr = cmdPublishers.values().iterator();
+        while (itr.hasNext()) {
+            ClientPublisherModule publisherModule = new ClientPublisherModule(itr.next(), transportParams, instanceInfo);
+            pollables.add(publisherModule.transport());
+            modules.add(publisherModule);
         }
     }
 
     public Host deploySequencer(TransportParams sequencerParams, TransportParams consensusParams) {
         InstanceInfo instanceInfo = new InstanceInfo(Sequencer, "localhost", sequencerParams.instanceId());
+        SeqNoClient seqNoClient = new SeqNoClient(new ShmSeqNoClient(sequencerParams.instanceId()));
         AeronClient consensusAeronClient = new AeronClient(params, instanceInfo);
 
         ConsensusStateHolder consensusStateHolder = new ConsensusStateHolder(instanceInfo);
-        List<CommandPublisher> cmdPublishers = createConsensusPublishers(instanceInfo, clusterMembers, consensusAeronClient);
-        List<CommandProcessor> cmdProcessors = createCommandProcessors(cmdPublishers, instanceInfo);
-        consensusParams.addListener(new ConsensusEventListener(clock, consensusStateHolder, clusterMembers.get(hostNum - 1), cmdProcessors));
+        Long2ObjectHashMap<CommandPublisher> cmdPublishers = createConsensusPublishers(instanceInfo, clusterMembers, consensusAeronClient);
+        Long2ObjectHashMap<CommandProcessor> cmdProcessors = createCommandProcessors(cmdPublishers, instanceInfo);
+
+        consensusParams.addListener(new ConsensusEventListener(
+                instanceInfo,
+                clock,
+                consensusStateHolder,
+                clusterMembers,
+                cmdProcessors,
+                seqNoClient));
         createAndAddPublisherModules(cmdPublishers, consensusParams, instanceInfo);
 
-        ConsensusTransportClient consensusTransportClient = new RaftAeronConsensusClient(instanceInfo, clock, consensusAeronClient, clusterMembers, cmdProcessors, consensusParams, 5);
+        ConsensusTransportClient consensusTransportClient = new RaftAeronConsensusClient(
+                instanceInfo,
+                clock,
+                consensusAeronClient,
+                clusterMembers,
+                cmdProcessors,
+                consensusParams,
+                seqNoClient,
+                5);
+
         consensus = new ConsensusModule(consensusTransportClient, consensusStateHolder, instanceInfo);
         pollables.add(consensus.transport());
         modules.add(consensusAeronClient);
         modules.add(consensus);
 
         AeronClient aeronClient = new AeronClient(params, instanceInfo);
-        SeqNoClient seqNoClient = new SeqNoClient(new ShmSeqNoClient(sequencerParams.instanceId()));
         SequencerClient sequencerClient = new AeronSequencerClient(instanceInfo, aeronClient, sequencerParams, consensusStateHolder, seqNoClient);
         sequencer = new SequencerModule(sequencerParams, sequencerClient, consensusStateHolder, instanceInfo);
         pollables.add(sequencer.transport());

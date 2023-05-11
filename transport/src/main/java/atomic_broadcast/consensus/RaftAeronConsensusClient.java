@@ -14,6 +14,7 @@ import command.*;
 import io.aeron.FragmentAssembler;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.FragmentHandler;
+import org.agrona.collections.Long2ObjectHashMap;
 import time.Clock;
 
 import java.util.List;
@@ -29,12 +30,13 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
     private final InstanceInfo instanceInfo;
     private final Clock clock;
     private final AeronClient aeronClient;
-    private final List<ClusterMember> clusterMembers;
-    private final List<CommandProcessor> cmdProcessors;
+    private final Long2ObjectHashMap<ClusterMember> clusterMembers;
+    private final Long2ObjectHashMap<CommandProcessor> cmdProcessors;
     private Subscription consensusSubscription;
     private final AeronConsensusFragmentHandler delegateHandler;
     private final FragmentHandler fragmentHandler;
     private final TransportParams consensusParams;
+    private final SeqNoClient seqNoClient;
     private final BoundedRandomNumberGenerator randomNumberGenerator;
     private final long randomOffset;
 
@@ -43,9 +45,10 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
     public RaftAeronConsensusClient(InstanceInfo instanceInfo,
                                     Clock clock,
                                     AeronClient aeronClient,
-                                    List<ClusterMember> clusterMembers,
-                                    List<CommandProcessor> cmdProcessors,
+                                    Long2ObjectHashMap<ClusterMember> clusterMembers,
+                                    Long2ObjectHashMap<CommandProcessor> cmdProcessors,
                                     TransportParams consensusParams,
+                                    SeqNoClient seqNoClient,
                                     int electionTimeoutSeconds
     ) {
         this.instanceInfo = instanceInfo;
@@ -54,6 +57,7 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
         this.clusterMembers = clusterMembers;
         this.cmdProcessors = cmdProcessors;
         this.consensusParams = consensusParams;
+        this.seqNoClient = seqNoClient;
         this.delegateHandler = new AeronConsensusFragmentHandler(consensusParams.listeners());
         this.fragmentHandler = new FragmentAssembler(delegateHandler);
         this.randomNumberGenerator = new BoundedRandomNumberGenerator(
@@ -67,8 +71,7 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
     }
 
     public void initialiseConsensusSubscription() {
-        for (int i = 0; i < clusterMembers.size(); i++) {
-            ClusterMember member = clusterMembers.get(i);
+        for (ClusterMember member : clusterMembers.values()) {
             if (member.instance() == instanceInfo.instance()) {
                 consensusSubscription = aeronClient.addSubscription(member.publicationChannel(), CONSENSUS_STREAM_ID);
             }
@@ -131,43 +134,37 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
 
     @Override
     public boolean startElection() {
+        ConsensusStateSnapshot consensusStateSnapshot = seqNoClient.readSeqNum();
+        resetElectionTimeOut();
 
-        long votedFor = -1;
-        long currentTerm = -1;
         boolean sent = false;
-        for (int i = 0; i < clusterMembers.size(); i++) {
-            ClusterMember member = clusterMembers.get(i);
-            if (member.instance() == instanceInfo.instance()) {
-                member.votedFor(instanceInfo.instance());
-                member.incrementTerm();
 
-                votedFor = member.votedFor();
-                currentTerm = member.currentTerm();
-                resetElectionTimeOut();
+        for (CommandProcessor cmdProcessor : cmdProcessors.values()) {
+            RequestVoteCommandImpl cmd = cmdBuilder
+                    .createRequestVote();
+
+            cmd.term(consensusStateSnapshot.currentTerm() + 1)
+                    .candidateId(instanceInfo.instance())
+                    .seqNo(consensusStateSnapshot.seqNo())
+                    .logPosition(consensusStateSnapshot.logPosition());
+
+            Action action = cmdProcessor.send(cmd);
+
+            if (action == CommandSent) {
+                sent = true;
             }
         }
 
-        for (int i = 0; i < cmdProcessors.size(); i++) {
-            ClusterMember member = clusterMembers.get(i);
-            CommandProcessor cmdProcessor = cmdProcessors.get(i);
-            if (member.instance() != instanceInfo.instance()) {
-                RequestVoteCommandImpl cmd = cmdBuilder
-                        .createRequestVote();
-
-                cmd.term(currentTerm)
-                        .candidateId(votedFor)
-                        .seqNo(0)
-                        .logPosition(0);
-
-                Action action = cmdProcessor.send(cmd);
-
-                if (action == CommandSent) {
-                    sent = true;
-                }
-            }
+        if (sent) {
+            seqNoClient.writeConsensusState(consensusStateSnapshot.currentTerm() + 1, instanceInfo.instance());
         }
 
         return sent;
+    }
+
+    @Override
+    public boolean sendHeartbeat() {
+        return false;
     }
 
     @Override

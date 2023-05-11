@@ -41,7 +41,7 @@ public class AeronSequencerFragmentHandler implements FragmentHandler {
         }
 
         sequencerClient.publish(packet.buffer(), 0, length);
-        seqNumWriter.writeSeqNum(instance, seqNo);
+        seqNumWriter.writeSeqNum(instance, seqNo, sequencerClient.position());
     }
 
     public long seqNo() {

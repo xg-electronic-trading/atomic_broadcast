@@ -14,6 +14,7 @@ public class ConsensusStateHolder {
     private ClusterTransportState state;
     private String leaderHostname = "localhost";
     private boolean requestedVote;
+    private long noOfActiveClusterMembers = 0;
     private int leaderInstance = -1;
 
     public ConsensusStateHolder(InstanceInfo instanceInfo) {
@@ -66,4 +67,16 @@ public class ConsensusStateHolder {
     }
 
     public boolean isLeaderAssigned() { return leaderInstance != -1; }
+
+    public void incrementActiveClusterMembers() {
+        noOfActiveClusterMembers++;
+    }
+
+    public long getNoOfActiveClusterMembers() {
+        return noOfActiveClusterMembers;
+    }
+
+    public void resetActiveClusterMembers() {
+        noOfActiveClusterMembers = 0;
+    }
 }

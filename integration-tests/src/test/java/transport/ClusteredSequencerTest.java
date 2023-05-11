@@ -23,7 +23,7 @@ public class ClusteredSequencerTest {
         fixture.after();
     }
 
-    @Disabled
+    @Test
     public void clusterMembersStartUpScenario() {
         fixture.pollAllUntilLeaderElected();
     }

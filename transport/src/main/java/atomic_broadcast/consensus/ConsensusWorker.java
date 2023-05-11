@@ -85,6 +85,7 @@ public class ConsensusWorker implements TransportWorker {
     }
 
     private void onLeader() {
-        requestedVote = false;
+        consensusTransport.pollSubscription();
+        consensusTransport.sendHeartbeat();
     }
 }

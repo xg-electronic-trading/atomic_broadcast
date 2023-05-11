@@ -5,4 +5,5 @@ public interface ConsensusTransportClient extends AutoCloseable {
     boolean pollSubscription();
     boolean hasHeartbeatTimeoutExpired();
     boolean startElection();
+    boolean sendHeartbeat();
 }

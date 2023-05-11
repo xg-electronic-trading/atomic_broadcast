@@ -8,11 +8,9 @@ import io.aeron.Publication;
 import static atomic_broadcast.aeron.AeronModule.*;
 
 public class ClusterMember {
-
-    private long currentTerm; //last term (election cycle) server has seen
-    private long votedFor; //instance id that received vote in current term.
     private final App app;
     private final int instance;
+    private boolean votedGranted;
 
     private final ChannelUriStringBuilder publicationBuilder = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA);
@@ -25,27 +23,19 @@ public class ClusterMember {
         publicationChannel = publicationBuilder.endpoint(LOCAL_HOST + ":" + (CONSENSUS_PORT_RANGE_START + instance)).build();
     }
 
-    public void incrementTerm() {
-        currentTerm++;
-    }
-
-    public void votedFor(long instance) {
-        votedFor = instance;
-    }
-
-    public long currentTerm() {
-        return currentTerm;
-    }
-
-    public long votedFor() {
-        return votedFor;
-    }
-
     public String publicationChannel() {
         return publicationChannel;
     }
 
     public long instance() {
         return instance;
+    }
+
+    public void setVotedGranted(boolean votedGranted) {
+        this.votedGranted = votedGranted;
+    }
+
+    public boolean isVotedGranted() {
+        return votedGranted;
     }
 }

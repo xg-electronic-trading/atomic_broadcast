@@ -33,6 +33,7 @@ public class AeronSequencerClient implements SequencerClient {
     private Publication publication;
     private ReplayMerge replayMerge;
     private FragmentHandler fragmentHandler;
+    private long position = -1;
     private final BufferClaim bufferClaim = new BufferClaim();
 
     private final String commandStreamSubscriptionChannel = new ChannelUriStringBuilder()
@@ -235,6 +236,11 @@ public class AeronSequencerClient implements SequencerClient {
         }
     }
 
+    @Override
+    public long position() {
+        return position;
+    }
+
     private ReplayMerge replayMerge(long recordingId,
                                     String subscriptionChannel,
                                     String replayChannel,
@@ -271,6 +277,11 @@ public class AeronSequencerClient implements SequencerClient {
             log.error().appendLast("max position exceeded. publication should be closed and then a new one added.");
             return false;
         }
+
+        /**
+         * update position once message has been sent.
+         */
+        position = publication.position();
 
         return true;
     }
