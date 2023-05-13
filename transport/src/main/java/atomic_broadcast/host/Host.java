@@ -127,7 +127,8 @@ public class Host {
                 cmdProcessors,
                 consensusParams,
                 seqNoClient,
-                5);
+                5,
+                1);
 
         consensus = new ConsensusModule(consensusTransportClient, consensusStateHolder, instanceInfo);
         pollables.add(consensus.transport());

@@ -17,7 +17,6 @@ import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.collections.Long2ObjectHashMap;
 import time.Clock;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static atomic_broadcast.aeron.AeronModule.CONSENSUS_STREAM_ID;
@@ -39,6 +38,9 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
     private final SeqNoClient seqNoClient;
     private final BoundedRandomNumberGenerator randomNumberGenerator;
     private final long randomOffset;
+    private final long hearbeatIntervalMillis;
+
+    private long lastHeartbeatSendTime = 0;
 
     private final CommandBuilder cmdBuilder = new CommandBuilderImpl();
 
@@ -49,7 +51,8 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
                                     Long2ObjectHashMap<CommandProcessor> cmdProcessors,
                                     TransportParams consensusParams,
                                     SeqNoClient seqNoClient,
-                                    int electionTimeoutSeconds
+                                    int electionTimeoutSeconds,
+                                    int heartbeatIntervalSeconds
     ) {
         this.instanceInfo = instanceInfo;
         this.clock = clock;
@@ -64,9 +67,11 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
                 TimeUnit.SECONDS.toMillis(electionTimeoutSeconds)
         );
         this.randomOffset = randomNumberGenerator.generateRandom();
+        this.hearbeatIntervalMillis = TimeUnit.SECONDS.toMillis(heartbeatIntervalSeconds);
 
         log.info().append("app: ").append(instanceInfo.app())
                 .append(", instance: ").append(instanceInfo.instance())
+                .append(", heartbeat interval seconds: ")
                 .append(", election timeout millis: ").appendLast(randomOffset);
     }
 
@@ -97,7 +102,7 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
             if (listener instanceof ConsensusEventListener) {
                 ConsensusEventListener consensusEventListener = (ConsensusEventListener) listener;
                 long expireTime = clock.time() - randomOffset;
-                if (isMessageOlderThanTimeout(consensusEventListener.lastMessageReceivedMillis(), expireTime)) {
+                if (lookbackPeriodExpired(consensusEventListener.lastMessageReceivedMillis(), expireTime)) {
                     log.info().append("app: ").append(instanceInfo.app())
                             .append(", instance: ").append(instanceInfo.instance())
                             .append(", lastMessageReceivedMillis: ").append(consensusEventListener.lastMessageReceivedMillis())
@@ -111,8 +116,8 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
         return false;
     }
 
-    private boolean isMessageOlderThanTimeout(long lastMessageTime, long expireTime) {
-        return expireTime > lastMessageTime;
+    private boolean lookbackPeriodExpired(long lastUpdateTime, long lookbackTime) {
+        return lookbackTime > lastUpdateTime;
     }
 
     private void resetElectionTimeOut() {
@@ -164,7 +169,26 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
 
     @Override
     public boolean sendHeartbeat() {
-        return false;
+        boolean sent = false;
+        ConsensusStateSnapshot consensusStateSnapshot = seqNoClient.readSeqNum();
+
+        long lookbackPeriod = clock.time() - hearbeatIntervalMillis;
+        if (0 == lastHeartbeatSendTime || lookbackPeriodExpired(lastHeartbeatSendTime, lookbackPeriod)) {
+            for (CommandProcessor cmdProcessor : cmdProcessors.values()) {
+                AppendEntriesCommandimpl cmd = cmdBuilder.createAppendEntries();
+                cmd.leaderId(instanceInfo.instance())
+                        .term(consensusStateSnapshot.currentTerm());
+
+                Action action = cmdProcessor.send(cmd);
+
+                if (action == CommandSent) {
+                    sent = true;
+                    lastHeartbeatSendTime = clock.time();
+                }
+            }
+        }
+
+        return sent;
     }
 
     @Override
