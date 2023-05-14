@@ -127,6 +127,7 @@ public class Host {
                 cmdProcessors,
                 consensusParams,
                 seqNoClient,
+                consensusStateHolder,
                 5,
                 1);
 

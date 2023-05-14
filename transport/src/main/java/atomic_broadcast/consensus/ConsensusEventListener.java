@@ -176,7 +176,8 @@ public class ConsensusEventListener implements MessageListener {
                 }
             }
 
-            boolean isLeader = votes >= ConsensusUtils.quorumThreshold(consensusStateHolder.getNoOfActiveClusterMembers());
+            long threshold = ConsensusUtils.quorumThreshold(consensusStateHolder.getNoOfActiveClusterMembers());
+            boolean isLeader = votes >= threshold;
 
             if (isLeader) {
                 consensusStateHolder.setState(Leader);
@@ -184,8 +185,9 @@ public class ConsensusEventListener implements MessageListener {
 
                 log.info().append("app: ").append(instanceInfo.app())
                         .append(", instance: ").append(instanceInfo.instance())
-                        .append(", received ").append(votes).append(" votes. ")
-                        .appendLast(" Assuming leadership.");
+                        .append(", received ").append(votes).append(" votes")
+                        .append(", threshold votes: ").append(threshold)
+                        .appendLast(", assuming leadership.");
             }
         }
     }

@@ -25,7 +25,11 @@ public class ClusteredSequencerTest {
 
     @Test
     public void clusterMembersStartUpScenario() {
-        fixture.pollAllUntilLeaderElected();
+        fixture.pollAllUntil(fixture.findLeaderPred);
+        fixture.pollAllUntil(fixture.findFollowerPred);
+        /*fixture.pollAllUntil(fixture.commandBusSubscribed);
+        fixture.pollAllUntil(fixture.eventBusPublicationStarted);
+        fixture.pollAllUntil(fixture.replicationStarted);*/
     }
 
     @Test

@@ -14,7 +14,7 @@ public class ConsensusStateHolder {
     private ClusterTransportState state;
     private String leaderHostname = "localhost";
     private boolean requestedVote;
-    private long noOfActiveClusterMembers = 0;
+    private long noOfActiveClusterMembers = 1;
     private int leaderInstance = -1;
 
     public ConsensusStateHolder(InstanceInfo instanceInfo) {
@@ -77,6 +77,7 @@ public class ConsensusStateHolder {
     }
 
     public void resetActiveClusterMembers() {
-        noOfActiveClusterMembers = 0;
+        //always reset back to single member. i.e. this server.
+        noOfActiveClusterMembers = 1;
     }
 }

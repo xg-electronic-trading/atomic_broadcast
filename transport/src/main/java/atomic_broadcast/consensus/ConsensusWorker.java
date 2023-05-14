@@ -76,6 +76,7 @@ public class ConsensusWorker implements TransportWorker {
         if (requestedVote) {
             if (consensusTransport.hasHeartbeatTimeoutExpired()) {
                 requestedVote = false;
+                consensusStateHolder.resetActiveClusterMembers();
             } else {
                 consensusTransport.pollSubscription();
             }

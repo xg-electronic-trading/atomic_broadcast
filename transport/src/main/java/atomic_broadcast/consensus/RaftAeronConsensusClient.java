@@ -37,6 +37,7 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
     private final TransportParams consensusParams;
     private final SeqNoClient seqNoClient;
     private final BoundedRandomNumberGenerator randomNumberGenerator;
+    private final ConsensusStateHolder consensusStateHolder;
     private final long randomOffset;
     private final long hearbeatIntervalMillis;
 
@@ -51,6 +52,7 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
                                     Long2ObjectHashMap<CommandProcessor> cmdProcessors,
                                     TransportParams consensusParams,
                                     SeqNoClient seqNoClient,
+                                    ConsensusStateHolder consensusStateHolder,
                                     int electionTimeoutSeconds,
                                     int heartbeatIntervalSeconds
     ) {
@@ -66,6 +68,7 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
         this.randomNumberGenerator = new BoundedRandomNumberGenerator(
                 TimeUnit.SECONDS.toMillis(electionTimeoutSeconds)
         );
+        this.consensusStateHolder = consensusStateHolder;
         this.randomOffset = randomNumberGenerator.generateRandom();
         this.hearbeatIntervalMillis = TimeUnit.SECONDS.toMillis(heartbeatIntervalSeconds);
 
@@ -140,6 +143,7 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
     @Override
     public boolean startElection() {
         ConsensusStateSnapshot consensusStateSnapshot = seqNoClient.readSeqNum();
+        clusterMembers.get(instanceInfo.instance()).setVotedGranted(true);
         resetElectionTimeOut();
 
         boolean sent = false;
@@ -156,6 +160,7 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
             Action action = cmdProcessor.send(cmd);
 
             if (action == CommandSent) {
+                consensusStateHolder.incrementActiveClusterMembers();
                 sent = true;
             }
         }

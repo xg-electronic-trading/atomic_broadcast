@@ -15,6 +15,7 @@ import org.junit.jupiter.api.AfterEach;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static atomic_broadcast.consensus.ClusterTransportState.Leader;
@@ -70,7 +71,7 @@ public class SequencerTestFixture {
         });
     }
 
-    public void pollAllUntilLeaderElected() {
+    public void pollAllUntil(Predicate<Module> predicate) {
         List<Pollable> allPollables = hosts.stream()
                 .flatMap(hosts -> hosts.pollables().stream())
                 .collect(Collectors.toList());
@@ -79,15 +80,24 @@ public class SequencerTestFixture {
                 .flatMap(host -> host.moduleList().stream())
                 .collect(Collectors.toList());
 
-        pollUntil(allPollables, () -> {
-            Module module = findModule(ModuleName.Consensus, allModules);
-            if (module instanceof ConsensusModule) {
-                ConsensusModule consensus = (ConsensusModule) module;
-                return consensus.consensusState().isLeader();
-            }
-            return false;
-        });
+        pollUntil(allPollables, () -> allModules.stream().anyMatch(predicate));
     }
+
+    public Predicate<Module> findLeaderPred = m -> {
+        if (m instanceof ConsensusModule) {
+            ConsensusModule consensus = (ConsensusModule) m;
+            return consensus.consensusState().isLeader();
+        }
+        return false;
+    };
+
+    public Predicate<Module> findFollowerPred = m -> {
+        if (m instanceof ConsensusModule) {
+            ConsensusModule consensus = (ConsensusModule) m;
+            return consensus.consensusState().isFollower();
+        }
+        return false;
+    };
 
     public CommandPublisher cmdPublisher() {
         Optional<Host> hostOpt = hosts.stream().filter(h -> h.hostNum() == 1).findFirst();
