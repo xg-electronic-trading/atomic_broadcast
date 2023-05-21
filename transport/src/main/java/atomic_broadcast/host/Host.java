@@ -47,9 +47,9 @@ public class Host {
         this.hostNum = hostNum;
         this.pollables = new ArrayList<>(20);
         this.clusterMembers = new Long2ObjectHashMap<>(20, 0.65f, true);
-        this.clusterMembers.put(1, new ClusterMember(Sequencer, 1));
-        this.clusterMembers.put(2, new ClusterMember(Sequencer, 2));
-        this.clusterMembers.put(3, new ClusterMember(Sequencer, 3));
+        this.clusterMembers.put(1, new ClusterMember(Sequencer, "localhost", ARCHIVE_REQUEST_PORT_RANGE_START + 1, 1));
+        this.clusterMembers.put(2, new ClusterMember(Sequencer, "localhost", ARCHIVE_REQUEST_PORT_RANGE_START + 2, 2));
+        this.clusterMembers.put(3, new ClusterMember(Sequencer, "localhost", ARCHIVE_REQUEST_PORT_RANGE_START + 3, 3));
         this.clock = new RealClock();
         this.modules = new CompositeModule();
         this.params = new AeronParams()
@@ -137,7 +137,14 @@ public class Host {
         modules.add(consensus);
 
         AeronClient aeronClient = new AeronClient(params, instanceInfo);
-        SequencerClient sequencerClient = new AeronSequencerClient(instanceInfo, aeronClient, sequencerParams, consensusStateHolder, seqNoClient);
+        SequencerClient sequencerClient = new AeronSequencerClient(
+                instanceInfo,
+                aeronClient,
+                sequencerParams,
+                consensusStateHolder,
+                seqNoClient,
+                clusterMembers);
+
         sequencer = new SequencerModule(sequencerParams, sequencerClient, consensusStateHolder, instanceInfo);
         pollables.add(sequencer.transport());
         modules.add(aeronClient);
@@ -148,7 +155,7 @@ public class Host {
     public Host deployClient(TransportParams transportParams, MessageListener listener) {
         InstanceInfo instanceInfo = new InstanceInfo(AlgoContainer, "localhost", transportParams.instanceId());
         AeronClient aeronClient = new AeronClient(params, instanceInfo);
-        TransportClient transportClient = new AeronTransportClient(aeronClient, transportParams);
+        TransportClient transportClient = new AeronTransportClient(aeronClient, transportParams, instanceInfo);
         CommandPublisher cmdPublisher = new AeronPublisherClient(aeronClient, transportParams.publicationChannel(), COMMAND_STREAM_ID);
         eventbus = new EventReaderModule(transportClient, transportParams, listener, instanceInfo);
         publisher = new ClientPublisherModule(cmdPublisher, transportParams, instanceInfo);

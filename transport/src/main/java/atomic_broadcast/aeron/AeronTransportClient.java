@@ -1,11 +1,14 @@
 package atomic_broadcast.aeron;
 
 import atomic_broadcast.client.TransportClient;
+import atomic_broadcast.utils.InstanceInfo;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import io.aeron.*;
+import io.aeron.archive.Archive;
 import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.client.ArchiveException;
 import io.aeron.archive.client.ReplayMerge;
 import io.aeron.logbuffer.FragmentHandler;
 
@@ -16,8 +19,9 @@ public class AeronTransportClient implements TransportClient {
 
     private static final Log log = LogFactory.getLog(AeronTransportClient.class.getName());
 
-    AeronClient aeronClient;
-    TransportParams params;
+    private final AeronClient aeronClient;
+    private final TransportParams params;
+    private final InstanceInfo instanceInfo;
 
     private RecordingDescriptor latestRecording;
     private Subscription subscription;
@@ -36,9 +40,10 @@ public class AeronTransportClient implements TransportClient {
             .endpoint(DYNAMIC_ENDPOINT)
             .build();
 
-    public AeronTransportClient(AeronClient aeronClient, TransportParams params) {
+    public AeronTransportClient(AeronClient aeronClient, TransportParams params, InstanceInfo instanceInfo) {
         this.aeronClient = aeronClient;
         this.params = params;
+        this.instanceInfo = instanceInfo;
         this.fragmentHandler = new FragmentAssembler(new AeronClientFragmentHandler(params.listeners()));
     }
 
@@ -49,7 +54,7 @@ public class AeronTransportClient implements TransportClient {
 
     @Override
     public boolean findJournal() {
-        latestRecording = aeronClient.findRecording();
+        latestRecording = aeronClient.findActiveRecording();
         return latestRecording.recordingId() != Aeron.NULL_VALUE;
     }
 
@@ -74,9 +79,13 @@ public class AeronTransportClient implements TransportClient {
                              * recording descriptor.
                              * For multicast, this is not a problem.
                              */
-                            .controlEndpoint(CONTROL_ENDPOINT)
+                            .controlEndpoint(LOCAL_HOST + ":" + EVENT_STREAM_CONTROL_PORT)
                             .endpoint(DYNAMIC_ENDPOINT)
                             .build();
+
+                    log.info().append("app: ").append(instanceInfo.app())
+                            .append(", instance: ").append(instanceInfo.instance())
+                            .append(", recording to replay-merge: ").appendLast(latestRecording);
 
                     replayMerge = replayMerge(
                             latestRecording.recordingId(),
@@ -105,7 +114,13 @@ public class AeronTransportClient implements TransportClient {
     public boolean pollReplay() {
         if (replayMerge != null) {
             if (!replayMerge.isMerged()) {
-                replayMerge.poll(fragmentHandler, FRAGMENT_LIMIT);
+                try {
+                    replayMerge.poll(fragmentHandler, FRAGMENT_LIMIT);
+                } catch (ArchiveException e) {
+                    log.error().append("app: ").append(instanceInfo.app())
+                            .append(", instance: ").append(instanceInfo.instance())
+                            .append(", exception: ").appendLast(e);
+                }
                 return false;
             } else {
                 log.info().appendLast(replayMerge.toString());

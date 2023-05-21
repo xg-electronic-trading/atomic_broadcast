@@ -25,11 +25,13 @@ public class ClusteredSequencerTest {
 
     @Test
     public void clusterMembersStartUpScenario() {
-        fixture.pollAllUntil(fixture.findLeaderPred);
-        fixture.pollAllUntil(fixture.findFollowerPred);
-        /*fixture.pollAllUntil(fixture.commandBusSubscribed);
-        fixture.pollAllUntil(fixture.eventBusPublicationStarted);
-        fixture.pollAllUntil(fixture.replicationStarted);*/
+        fixture.pollUntilAny(fixture.findLeaderPred);
+        fixture.pollUntilAny(fixture.findFollowerPred);
+        fixture.pollUntilAny(fixture.commandBusConnected);
+        fixture.pollUntilAny(fixture.startReplay);
+        fixture.pollUntilAny(fixture.pollReplay);
+        //poll until all clients have connected successfully
+        fixture.pollUntilAll(fixture.eventReaders, fixture.pollEventStream);
     }
 
     @Test

@@ -9,6 +9,8 @@ import static atomic_broadcast.aeron.AeronModule.*;
 
 public class ClusterMember {
     private final App app;
+    private final String hostname;
+    private final int archivePort;
     private final int instance;
     private boolean votedGranted;
 
@@ -17,8 +19,10 @@ public class ClusterMember {
 
     private final String publicationChannel;
 
-    public ClusterMember(App app, int instance) {
+    public ClusterMember(App app, String hostname, int archivePort, int instance) {
         this.app = app;
+        this.hostname = hostname;
+        this.archivePort = archivePort;
         this.instance = instance;
         publicationChannel = publicationBuilder.endpoint(LOCAL_HOST + ":" + (CONSENSUS_PORT_RANGE_START + instance)).build();
     }
@@ -37,5 +41,13 @@ public class ClusterMember {
 
     public boolean isVotedGranted() {
         return votedGranted;
+    }
+
+    public String hostname() {
+        return hostname;
+    }
+
+    public int archivePort() {
+        return archivePort;
     }
 }

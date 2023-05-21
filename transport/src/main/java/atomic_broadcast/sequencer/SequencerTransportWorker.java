@@ -79,13 +79,11 @@ public class SequencerTransportWorker implements TransportWorker {
             case StopRepliaction:
                 stopReplication();
                 break;
-            case StartReplayMerge:
-                state = transportClient.connectToEventStream() ? PollEventStream : StartReplayMerge;
-                break;
             case StartReplay:
+                startReplay();
                 break;
-            case PollEventStream:
-                transportClient.pollEventStream();
+            case PollReplay:
+                pollReplay();
                 break;
         }
     }
@@ -99,10 +97,8 @@ public class SequencerTransportWorker implements TransportWorker {
         if(consensusStateHolder.isLeaderAssigned()) {
             if (consensusStateHolder.isLeader()) {
                 active = true;
-                setState(ConnectToJournalSource);
-            } else {
-                setState(StartReplication);
             }
+            setState(ConnectToJournalSource);
         }
     }
 
@@ -163,12 +159,22 @@ public class SequencerTransportWorker implements TransportWorker {
     private void startReplication() {
         boolean replicationStarted = transportClient.startReplication();
         if (replicationStarted) {
-            setState(StartReplayMerge);
+            setState(StartReplay);
         }
     }
 
     private void stopReplication() {
         boolean isReplicationStopped = transportClient.stopReplication();
+    }
+
+    private void startReplay() {
+        if (transportClient.connectToEventStream()) {
+            setState(PollReplay);
+        }
+    }
+
+    private void pollReplay() {
+        transportClient.pollReplay();
     }
 
     private void setState(TransportState newState) {

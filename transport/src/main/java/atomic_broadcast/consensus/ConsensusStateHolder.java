@@ -12,7 +12,6 @@ public class ConsensusStateHolder {
 
     private final InstanceInfo instanceInfo;
     private ClusterTransportState state;
-    private String leaderHostname = "localhost";
     private boolean requestedVote;
     private long noOfActiveClusterMembers = 1;
     private int leaderInstance = -1;
@@ -20,8 +19,6 @@ public class ConsensusStateHolder {
     public ConsensusStateHolder(InstanceInfo instanceInfo) {
         this.instanceInfo = instanceInfo;
     }
-
-    public void setLeaderHostname(String leaderHostname) { this.leaderHostname = leaderHostname; }
 
     public void setLeaderInstance(int instanceId) { this.leaderInstance = instanceId; }
 
@@ -38,20 +35,12 @@ public class ConsensusStateHolder {
         }
     }
 
-    public String getLeaderHostname() {
-        return leaderHostname;
-    }
-
     public long getLeaderInstance() {
         return leaderInstance;
     }
 
     public ClusterTransportState getState() {
         return state;
-    }
-
-    public boolean hasRequestedVote() {
-        return requestedVote;
     }
 
     public boolean isFollower() {

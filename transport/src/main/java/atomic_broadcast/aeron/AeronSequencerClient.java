@@ -1,6 +1,7 @@
 package atomic_broadcast.aeron;
 
 import atomic_broadcast.consensus.ClientSeqNumWriter;
+import atomic_broadcast.consensus.ClusterMember;
 import atomic_broadcast.consensus.ConsensusStateHolder;
 import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.utils.InstanceInfo;
@@ -14,9 +15,11 @@ import io.aeron.archive.codecs.RecordingSignal;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.DirectBuffer;
+import org.agrona.collections.Long2ObjectHashMap;
 
 import static atomic_broadcast.aeron.AeronModule.*;
 import static io.aeron.Publication.*;
+import static io.aeron.archive.client.RecordingSignalPoller.FRAGMENT_LIMIT;
 
 public class AeronSequencerClient implements SequencerClient {
 
@@ -33,6 +36,7 @@ public class AeronSequencerClient implements SequencerClient {
     private Publication publication;
     private ReplayMerge replayMerge;
     private FragmentHandler fragmentHandler;
+    private Long2ObjectHashMap<ClusterMember> clusterMembers;
     private long position = -1;
     private final BufferClaim bufferClaim = new BufferClaim();
 
@@ -43,12 +47,14 @@ public class AeronSequencerClient implements SequencerClient {
 
     private String publicationChannel;
 
-    ChannelUriStringBuilder udpSubscriptionChannel = new ChannelUriStringBuilder()
+    ChannelUriStringBuilder manualSubscriptionChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
             .controlMode(CommonContext.MDC_CONTROL_MODE_MANUAL);
 
     ChannelUriStringBuilder udpReplayChannel = new ChannelUriStringBuilder()
-            .media(CommonContext.UDP_MEDIA);
+            .media(CommonContext.UDP_MEDIA)
+            .linger(0L)
+            .eos(false);
 
     private final String udpReplayDestinationChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
@@ -59,12 +65,15 @@ public class AeronSequencerClient implements SequencerClient {
                                 AeronClient aeronClient,
                                 TransportParams params,
                                 ConsensusStateHolder consensusState,
-                                ClientSeqNumWriter seqNumWriter) {
+                                ClientSeqNumWriter seqNumWriter,
+                                Long2ObjectHashMap<ClusterMember> clusterMembers
+                                ) {
         this.instanceInfo = instanceInfo;
         this.aeronClient = aeronClient;
         this.params = params;
         this.consensusState = consensusState;
         this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(this, params.listeners(), seqNumWriter, params.instanceId()));
+        this.clusterMembers = clusterMembers;
         createEventStreamPublicationChannel();
     }
 
@@ -90,43 +99,34 @@ public class AeronSequencerClient implements SequencerClient {
     @Override
     public boolean connectToEventStream() {
         switch (params.connectUsing()) {
-            case Unicast:
-                String subscriptionChannel = udpSubscriptionChannel
-                        .sessionId(latestRecording.sessionId())
-                        .build();
-
-                String replayChannel = udpReplayChannel
-                        .sessionId(latestRecording.sessionId())
-                        .build();
-
-                String liveDestination = new ChannelUriStringBuilder()
-                        .media(CommonContext.UDP_MEDIA)
-                        /**
-                         * need to know leader host name when replicate sequencer is replaying
-                         * from leader sequencer.
-                         * For multicast, this is not a problem.
-                         */
-                        .controlEndpoint(consensusState.getLeaderHostname() + ":" + EVENT_STREAM_CONTROL_PORT)
-                        .endpoint(DYNAMIC_ENDPOINT)
-                        .build();
-
-                replayMerge = replayMerge(
-                        latestRecording.recordingId(),
-                        subscriptionChannel,
-                        replayChannel,
-                        udpReplayDestinationChannel,
-                        liveDestination,
-                        aeronClient.aeronArchive()
-                );
-
-                return true;
-
             case Multicast:
+            case Unicast:
+                latestRecording = aeronClient.findActiveRecording();
+                if (latestRecording.recordingId() != Aeron.NULL_VALUE) {
+                    if (null == subscription) {
+                        String subscriptionChannel = manualSubscriptionChannel
+                                .sessionId(latestRecording.sessionId())
+                                .build();
+                        subscription = aeronClient.addSubscription(subscriptionChannel, EVENT_STREAM_ID);
+                        subscription.asyncAddDestination(udpReplayDestinationChannel);
+                    }
+
+                    String resolvedEndpoint = subscription.resolvedEndpoint();
+
+                    if (null != resolvedEndpoint) {
+                        String replayChannel = udpReplayChannel
+                                .endpoint(resolvedEndpoint)
+                                .build();
+                        return aeronClient.startOpenEndedReplay(latestRecording, replayChannel);
+                    }
+                }
+                break;
             case Ipc:
             case Journal:
+                return false;
         }
 
-        return true;
+        return false;
     }
 
     @Override
@@ -136,7 +136,9 @@ public class AeronSequencerClient implements SequencerClient {
 
     @Override
     public boolean pollReplay() {
-        return false;
+        aeronClient.checkReplicationDone();
+        subscription.poll(fragmentHandler, FRAGMENT_LIMIT);
+        return true;
     }
 
     @Override
@@ -167,7 +169,13 @@ public class AeronSequencerClient implements SequencerClient {
 
     @Override
     public boolean startReplication() {
-        return aeronClient.startReplication(params, latestRecording);
+        ClusterMember leader = clusterMembers.get(consensusState.getLeaderInstance());
+        boolean started = aeronClient.startReplication(params, latestRecording, leader);
+        if (started) {
+            return aeronClient.pollForRecordingSignal(RecordingSignal.MERGE);
+        } else {
+            return false;
+        }
     }
 
     @Override
@@ -180,6 +188,9 @@ public class AeronSequencerClient implements SequencerClient {
     public boolean createEventStream() {
         if (null == publication) {
             publication = aeronClient.addExclusivePublication(publicationChannel, EVENT_STREAM_ID);
+            log.info().append("app: ").append(instanceInfo.app())
+                    .append(", instance: ").append(instanceInfo.instance())
+                    .append(", publication session-id: ").appendLast(publication.sessionId());
             return publication != null;
         } else {
             return true;
@@ -288,6 +299,7 @@ public class AeronSequencerClient implements SequencerClient {
 
     @Override
     public void close() {
+        aeronClient.closeReplay();
         aeronClient.closeSubscription(subscription);
         aeronClient.closeReplication();
         aeronClient.closeRecording();

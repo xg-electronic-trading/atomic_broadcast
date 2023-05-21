@@ -74,7 +74,7 @@ public class AlgoContainerMain {
                 .lowLatencyMode(false);
 
         AeronClient aeronClient = new AeronClient(params, instanceInfo);
-        TransportClient transportClient = new AeronTransportClient(aeronClient, clientParams);
+        TransportClient transportClient = new AeronTransportClient(aeronClient, clientParams, instanceInfo);
         EventReaderModule eventbus = new EventReaderModule(transportClient, clientParams, eventListener, instanceInfo);
         modules.add(aeronClient);
         modules.add(eventbus);

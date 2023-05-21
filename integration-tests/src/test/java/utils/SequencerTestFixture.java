@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import static atomic_broadcast.consensus.ClusterTransportState.Leader;
 import static atomic_broadcast.utils.ShmFileConstants.SEQ_NUM_FILE_PREFIX;
 import static atomic_broadcast.utils.ShmFileConstants.SHM_SUFFIX;
+import static atomic_broadcast.utils.TransportState.*;
 import static org.junit.jupiter.api.Assertions.fail;
 import static utils.AsyncAssertions.pollUntil;
 
@@ -65,13 +66,13 @@ public class SequencerTestFixture {
 
     public void pollStandAloneSequencer() {
         hosts.forEach(h -> {
-            pollSequencer(TransportState.PollCommandStream, h);
+            pollSequencer(PollCommandStream, h);
             pollPublisher(TransportState.ConnectedToCommandStream, h);
             pollClientTransport(TransportState.PollEventStream, h);
         });
     }
 
-    public void pollAllUntil(Predicate<Module> predicate) {
+    public void pollUntilAny(Predicate<Module> predicate) {
         List<Pollable> allPollables = hosts.stream()
                 .flatMap(hosts -> hosts.pollables().stream())
                 .collect(Collectors.toList());
@@ -83,10 +84,46 @@ public class SequencerTestFixture {
         pollUntil(allPollables, () -> allModules.stream().anyMatch(predicate));
     }
 
+    public void pollUntilAll(Predicate<Module> moduleFilter, Predicate<Module> predicate) {
+        List<Pollable> allPollables = hosts.stream()
+                .flatMap(hosts -> hosts.pollables().stream())
+                .collect(Collectors.toList());
+
+        List<Module> allModules = hosts.stream()
+                .flatMap(host -> host.moduleList().stream())
+                .collect(Collectors.toList());
+
+        pollUntil(allPollables, () -> allModules.stream().filter(moduleFilter).allMatch(predicate));
+    }
+
     public Predicate<Module> findLeaderPred = m -> {
         if (m instanceof ConsensusModule) {
             ConsensusModule consensus = (ConsensusModule) m;
             return consensus.consensusState().isLeader();
+        }
+        return false;
+    };
+
+    public Predicate<Module> commandBusConnected = m -> {
+        if (m instanceof SequencerModule) {
+            SequencerModule seq = (SequencerModule) m;
+            return seq.state() == PollCommandStream;
+        }
+        return false;
+    };
+
+    public Predicate<Module> startReplay = m -> {
+        if (m instanceof SequencerModule) {
+            SequencerModule seq = (SequencerModule) m;
+            return seq.state() == StartReplay;
+        }
+        return false;
+    };
+
+    public Predicate<Module> pollReplay = m -> {
+        if (m instanceof SequencerModule) {
+            SequencerModule seq = (SequencerModule) m;
+            return seq.state() == PollReplay;
         }
         return false;
     };
@@ -98,6 +135,16 @@ public class SequencerTestFixture {
         }
         return false;
     };
+
+    public Predicate<Module> pollEventStream = m -> {
+        if (m instanceof EventReaderModule) {
+            EventReaderModule eventReaderModule = (EventReaderModule) m;
+            return eventReaderModule.state() == PollEventStream;
+        }
+        return false;
+    };
+
+    public Predicate<Module> eventReaders = m -> m instanceof EventReaderModule;
 
     public CommandPublisher cmdPublisher() {
         Optional<Host> hostOpt = hosts.stream().filter(h -> h.hostNum() == 1).findFirst();

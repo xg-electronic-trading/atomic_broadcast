@@ -15,6 +15,8 @@ import org.agrona.CloseHelper;
 import org.agrona.concurrent.BusySpinIdleStrategy;;
 import org.agrona.concurrent.NoOpIdleStrategy;
 
+import java.util.function.Predicate;
+
 import static atomic_broadcast.utils.ModuleName.AeronMediaDriver;
 
 public class AeronModule implements Module {
@@ -24,8 +26,8 @@ public class AeronModule implements Module {
     public static final String REPLICATION_CHANNEL = "aeron:udp?endpoint=localhost:0";
     public static final String LOCAL_ENDPOINT = "aeron:udp?endpoint=localhost:";
     public static final String CONTROL_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:0";
+    public static final String REPLAY_CHANNEL = "aeron:udp?endpoint=localhost:6666";
     public static final String COMMAND_ENDPOINT = "localhost:40001";
-    public static final String CONTROL_ENDPOINT = "localhost:40002";
     public static final String DYNAMIC_ENDPOINT = "localhost:0";
     public static final String LOCAL_HOST = "localhost";
     public static final int CONSENSUS_PORT_RANGE_START = 41000;
@@ -34,6 +36,8 @@ public class AeronModule implements Module {
     public static final int EVENT_STREAM_ID = 10_000_000;
     public static final int COMMAND_STREAM_ID = 20_000_000;
     public static final int CONSENSUS_STREAM_ID = 30_000_000;
+    public static final String MULTICAST_ADDRESS = "239.1.1.1"; //mock multicast address
+    public static final String MULTICAST_EVENT_STREAM_ENDPOINT = MULTICAST_ADDRESS + ":" + EVENT_STREAM_CONTROL_PORT;
 
     private ArchivingMediaDriver archivingMediaDriver;
     private AeronParams params;
