@@ -1,17 +1,25 @@
 package events;
 
-import orderstate.OrderState;
-import orderstate.StateCache;
+import algo.AlgoCode;
+import algo.AlgoContext;
+import orderstate.ByteBufferOrderStateCache;
+import orderstate.OrderStateFlyweight;
+import org.agrona.collections.Long2ObjectHashMap;
 import schema.api.NewOrderSingle;
 import schema.api.OrderCancelReplaceRequest;
 import schema.api.OrderCancelRequest;
 
 public class AlgoOrderEventHandler implements OrderEventHandler {
 
-    private final StateCache osCache;
+    private final ByteBufferOrderStateCache osCache;
+    private final AlgoContext algoContext;
+    private final Long2ObjectHashMap<AlgoCode> strategies = new Long2ObjectHashMap<>(20, 0.65f, true);
 
-    public AlgoOrderEventHandler(StateCache osCache) {
+    public AlgoOrderEventHandler(ByteBufferOrderStateCache osCache,
+                                 AlgoContext algoContext) {
         this.osCache = osCache;
+        this.algoContext = algoContext;
+
     }
 
     /**
@@ -35,6 +43,12 @@ public class AlgoOrderEventHandler implements OrderEventHandler {
 
     @Override
     public void onNewOrderSingle(NewOrderSingle newOrder) {
+        OrderStateFlyweight flyweight = osCache.orderState(newOrder.id());
+        flyweight.setPrice(newOrder.price());
+        flyweight.setQuantity(newOrder.qty());
+
+        //algo code should be instantiated on pending new per strategy type
+        //algoCode.onPendingNew(newOrder, flyweight, algoContext);
     }
 
     @Override

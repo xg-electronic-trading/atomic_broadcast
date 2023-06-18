@@ -8,7 +8,8 @@ public enum ModuleName implements CodedEnum {
     Composite(4),
     ClientPublisher(5),
     Clock(6),
-    Consensus(7);
+    Consensus(7),
+    Algo(8);
 
 
     private final int code;

@@ -4,7 +4,7 @@ import atomic_broadcast.client.ClientPublisherModule;
 import atomic_broadcast.client.CommandPublisher;
 import atomic_broadcast.client.EventReaderModule;
 import atomic_broadcast.consensus.ConsensusModule;
-import atomic_broadcast.host.Host;
+import host.Host;
 import atomic_broadcast.sequencer.SequencerModule;
 import atomic_broadcast.utils.*;
 import atomic_broadcast.utils.Module;

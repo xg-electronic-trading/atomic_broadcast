@@ -1,4 +1,4 @@
-package atomic_broadcast.host;
+package host;
 
 import atomic_broadcast.aeron.*;
 import atomic_broadcast.client.*;
@@ -10,15 +10,16 @@ import atomic_broadcast.utils.*;
 import atomic_broadcast.utils.Module;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
+import container.AlgoContainer;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectHashMap;
+import subscriptions.MarketDataService;
 import time.Clock;
 import time.RealClock;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static atomic_broadcast.aeron.AeronModule.*;
 import static atomic_broadcast.utils.App.AlgoContainer;
@@ -159,9 +160,21 @@ public class Host {
         CommandPublisher cmdPublisher = new AeronPublisherClient(aeronClient, transportParams.publicationChannel(), COMMAND_STREAM_ID);
         eventbus = new EventReaderModule(transportClient, transportParams, listener, instanceInfo);
         publisher = new ClientPublisherModule(cmdPublisher, transportParams, instanceInfo);
-        pollables.add(eventbus.transport());
-        pollables.add(eventbus.eventsReader());
-        pollables.add(publisher.transport());
+        CommandProcessor cmdProcessor = new CommandProcessorImpl(cmdPublisher, new NoOpCommandValidator(), instanceInfo);
+
+        MarketDataService mdService = new MarketDataService();
+
+        if (eventbus.eventReaderType() != EventReaderType.Direct) {
+            pollables.add(eventbus.transport());
+        }
+
+        Pollable algoContainer = new AlgoContainer(
+                publisher.transport(),
+                eventbus.eventsReader(),
+                mdService
+                );
+
+        pollables.add(algoContainer);
         modules.add(aeronClient);
         modules.add(eventbus);
         modules.add(publisher);

@@ -1,6 +1,5 @@
 package subscriptions;
 
-import container.OrderTriggerSetterProvider;
 import org.agrona.collections.LongHashSet;
 import org.agrona.collections.Object2ObjectHashMap;
 
@@ -9,18 +8,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Supplier;
 
-public class MarketDataImpl implements MarketDataProvider, MarketDataSubscriber, MarketDataPoller {
+public class MarketDataService implements MarketDataProvider, MarketDataSubscriber, MarketDataPoller {
 
     private final int INITIAL_SYM_CAPACITY = 5000;
     private final int INITIAL_ORDER_CAPACITY = 50_000;
 
     private final Map<CharSequence, AbstractSet<Long>> symToIds = new Object2ObjectHashMap<>(INITIAL_ORDER_CAPACITY, 0.55F, true);
     private final Supplier<AbstractSet<Long>> longSetSupplier = () -> new LongHashSet(300, 0.55f, true);
-
-    private final OrderTriggerSetterProvider orderTriggerSetter;
-
-    public MarketDataImpl(OrderTriggerSetterProvider orderTriggerSetter) {
-        this.orderTriggerSetter = orderTriggerSetter;
+    public MarketDataService() {
     }
 
 
@@ -60,7 +55,7 @@ public class MarketDataImpl implements MarketDataProvider, MarketDataSubscriber,
                 Iterator<Long> idItr = idSet.iterator();
                 while (idItr.hasNext()) {
                     long orderId = idItr.next();
-                    orderTriggerSetter.getOrderTrigger(orderId).markOrderToRun();
+                    //orderTriggerSetter.getOrderTrigger(orderId).markOrderToRun();
                 }
 
                 return true;

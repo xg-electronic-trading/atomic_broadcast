@@ -22,6 +22,8 @@ public class EventReaderModule implements Module {
     private final TransportWorker transportSession;
     private RingBufferEventsReader eventsFromRingBufferReader;
 
+    private EventReaderType eventReaderType;
+
     public EventReaderModule(TransportClient transportClient,
                              TransportParams params,
                              MessageListener listener,
@@ -29,6 +31,7 @@ public class EventReaderModule implements Module {
         this.params = params;
         this.listener = listener;
         this.instanceInfo = instanceInfo;
+        this.eventReaderType = params.eventReaderType();
 
         switch (params.connectAs()) {
             case Client:
@@ -81,6 +84,8 @@ public class EventReaderModule implements Module {
             return eventsFromRingBufferReader;
         }
     }
+
+    public EventReaderType eventReaderType() { return eventReaderType; }
 
     public TransportState state() { return transportSession.state(); }
 
