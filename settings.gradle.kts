@@ -14,6 +14,7 @@ include("algo-container")
 include("perf-benchmarks")
 include("zgc-utilities")
 include("integration-tests")
+include("atomic-broadcast-all")
 
 
 dependencyResolutionManagement {
