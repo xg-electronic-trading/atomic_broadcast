@@ -6,7 +6,8 @@ public enum ClusterTransportState implements CodedEnum {
 
     Follower(0),
     Candidate(1),
-    Leader(2);
+    Leader(2),
+    NoState(3);
 
 
     int code;

@@ -63,8 +63,8 @@ public class AeronClient implements Module {
         this.instanceInfo = instanceInfo;
     }
 
-    public void updatePrimaryEventSource(String host) {
-
+    public InstanceInfo instanceInfo() {
+        return instanceInfo;
     }
 
 

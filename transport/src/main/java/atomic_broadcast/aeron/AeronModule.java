@@ -1,5 +1,6 @@
 package atomic_broadcast.aeron;
 
+import atomic_broadcast.utils.InstanceInfo;
 import atomic_broadcast.utils.Module;
 import atomic_broadcast.utils.ModuleName;
 import com.epam.deltix.gflog.api.Log;
@@ -41,9 +42,16 @@ public class AeronModule implements Module {
 
     private ArchivingMediaDriver archivingMediaDriver;
     private AeronParams params;
+    private final InstanceInfo instanceInfo;
 
-    public AeronModule(AeronParams params) {
+    public AeronModule(AeronParams params, InstanceInfo instanceInfo) {
         this.params = params;
+        this.instanceInfo = instanceInfo;
+    }
+
+    @Override
+    public InstanceInfo instanceInfo() {
+        return instanceInfo;
     }
 
     @Override

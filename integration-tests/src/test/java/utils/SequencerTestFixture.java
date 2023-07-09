@@ -4,6 +4,10 @@ import atomic_broadcast.client.ClientPublisherModule;
 import atomic_broadcast.client.CommandPublisher;
 import atomic_broadcast.client.EventReaderModule;
 import atomic_broadcast.consensus.ConsensusModule;
+import atomic_broadcast.consensus.ConsensusWorker;
+import atomic_broadcast.sequencer.SequencerTransportWorker;
+import com.epam.deltix.gflog.api.Log;
+import com.epam.deltix.gflog.api.LogFactory;
 import host.Host;
 import atomic_broadcast.sequencer.SequencerModule;
 import atomic_broadcast.utils.*;
@@ -27,6 +31,8 @@ import static utils.AsyncAssertions.pollUntil;
 
 public class SequencerTestFixture {
 
+    private final Log log = LogFactory.getLog(this.getClass().getName());
+
     private final List<Host> hosts = new ArrayList<>(10);
 
     public void before() {
@@ -43,7 +49,7 @@ public class SequencerTestFixture {
             TransportParams clientParams = TestTransportParams.createClientParams();
             clientParams.withEventReader(eventReaderType).instance(instance);
 
-            host.deployMediaDriver()
+            host.deployMediaDriver(instance)
                 .deploySequencer(TestTransportParams.createSequencerParams().instance(instance), TestTransportParams.createConsensusParams().instance(instance))
                 .deployClient(clientParams, new EventPrinter());
 
@@ -218,6 +224,35 @@ public class SequencerTestFixture {
         }
     }
 
+    public void stopLeader() {
+        hosts.stream()
+                .filter(h -> h.consensus().consensusState().isLeader())
+                .forEach(h -> {
+                            List<Module> modulesToClose =  h.modules()
+                                    .getModules()
+                                    .stream()
+                                    .filter(sequencerAppPred)
+                                    .collect(Collectors.toList());
+
+                            Collections.reverse(modulesToClose); //close modules in order of addition.
+                            modulesToClose
+                                    .forEach(m -> {
+                                        log.info().append("closing module: ").appendLast(m.name());
+                                        m.close();
+                                            });
+
+                            h.modules().getModules().forEach(m -> log.info().append("module (pre-removal): ").appendLast(m.name()));
+                            h.modules().getModules().removeIf(sequencerAppPred);
+                            h.modules().getModules().forEach(m -> log.info().append("module (post-removal): ").appendLast(m.name()));
+
+                            h.pollables().forEach(p -> log.info().append("pollable (pre-removal): ").appendLast(p));
+                            h.pollables().removeIf(p -> p instanceof SequencerTransportWorker || p instanceof ConsensusWorker);
+                            h.pollables().forEach(p -> log.info().append("pollable (post-removal): ").appendLast(p));
+                        }
+                );
+    }
+
+    private final Predicate<Module> sequencerAppPred = m -> m.instanceInfo().app() == App.Sequencer;
 
     @AfterEach
     public void after() {

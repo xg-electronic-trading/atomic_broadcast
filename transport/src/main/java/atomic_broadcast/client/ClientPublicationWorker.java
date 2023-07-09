@@ -34,6 +34,7 @@ public class ClientPublicationWorker implements TransportWorker {
     public void close() {
         try {
             commandPublisher.close();
+            setState(NoState);
         } catch (Exception e) {
             log.error().append("error whilst closing: ").appendLast(e);
         }

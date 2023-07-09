@@ -34,6 +34,7 @@ public class ClientTransportWorker implements TransportWorker {
     public void close() {
         try {
             transportClient.close();
+            setState(NoState);
         } catch (Exception e) {
             log.error().append("error whilst closing: ").appendLast(e);
         }

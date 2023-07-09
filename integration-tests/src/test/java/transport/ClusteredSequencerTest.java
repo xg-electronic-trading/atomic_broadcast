@@ -15,15 +15,7 @@ public class ClusteredSequencerTest {
         fixture = new SequencerTestFixture();
         fixture.before(EventReaderType.Direct, 2);
         fixture.start();
-    }
 
-    @AfterEach
-    public void after() {
-        fixture.after();
-    }
-
-    @Test
-    public void clusterMembersStartUpScenario() {
         fixture.pollUntilAny(fixture.findLeaderPred);
         fixture.pollUntilAny(fixture.findFollowerPred);
         fixture.pollUntilAny(fixture.commandBusConnected);
@@ -33,9 +25,17 @@ public class ClusteredSequencerTest {
         fixture.pollUntilAll(fixture.eventReaders, fixture.pollEventStream);
     }
 
+    @AfterEach
+    public void after() {
+        fixture.after();
+    }
+
+    @Test
+    public void clusterMembersStartUpScenario() {}
+
     @Test
     public void leaderDropsThenRejoinsScenario() {
-
+        fixture.stopLeader();
     }
 
     @Test

@@ -6,8 +6,7 @@ import atomic_broadcast.utils.TransportState;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 
-import static atomic_broadcast.consensus.ClusterTransportState.Candidate;
-import static atomic_broadcast.consensus.ClusterTransportState.Follower;
+import static atomic_broadcast.consensus.ClusterTransportState.*;
 
 public class ConsensusWorker implements TransportWorker {
 
@@ -37,6 +36,7 @@ public class ConsensusWorker implements TransportWorker {
     public void close() {
         try {
             consensusTransport.close();
+            consensusStateHolder.setState(NoState);
         } catch (Exception e){
             log.error().append("error whilst closing: ").appendLast(e);
         }
@@ -58,6 +58,8 @@ public class ConsensusWorker implements TransportWorker {
                 break;
             case Leader:
                 onLeader();
+                break;
+            case NoState:
                 break;
             default:
                 throw new IllegalStateException("unknown cluster transport state: " + consensusStateHolder.getState());

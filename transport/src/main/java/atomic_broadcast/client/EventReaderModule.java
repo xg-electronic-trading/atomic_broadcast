@@ -60,6 +60,11 @@ public class EventReaderModule implements Module {
     }
 
     @Override
+    public InstanceInfo instanceInfo() {
+        return instanceInfo;
+    }
+
+    @Override
     public void start() {
         transportSession.start();
     }

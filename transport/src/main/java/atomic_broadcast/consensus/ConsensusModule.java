@@ -16,6 +16,11 @@ public class ConsensusModule implements Module {
         return ModuleName.Consensus;
     }
 
+    @Override
+    public InstanceInfo instanceInfo() {
+        return instanceInfo;
+    }
+
     public ConsensusModule(ConsensusTransportClient transportClient,
                            ConsensusStateHolder consensusStateHolder,
                            InstanceInfo instanceInfo) {

@@ -9,11 +9,13 @@ public class ClientPublisherModule implements Module {
 
     private final CommandPublisher commandPublisher;
     private final TransportWorker transportSession;
+    private final InstanceInfo instanceInfo;
 
     public ClientPublisherModule(CommandPublisher commandPublisher,
                                  TransportParams params,
                                  InstanceInfo instanceInfo) {
         this.commandPublisher = commandPublisher;
+        this.instanceInfo = instanceInfo;
         switch (params.connectAs()) {
             case ClusterClient:
             case Client:
@@ -27,6 +29,11 @@ public class ClientPublisherModule implements Module {
     @Override
     public ModuleName name() {
         return ClientPublisher;
+    }
+
+    @Override
+    public InstanceInfo instanceInfo() {
+        return instanceInfo;
     }
 
     @Override

@@ -9,12 +9,15 @@ import static atomic_broadcast.utils.ModuleName.Sequencer;
 
 public class SequencerModule implements Module {
     private final TransportWorker transportSession;
+    private final InstanceInfo instanceInfo;
 
     public SequencerModule(
             TransportParams params,
             SequencerClient transport,
             ConsensusStateHolder consensusStateHolder,
             InstanceInfo instanceInfo) {
+        this.instanceInfo = instanceInfo;
+
         switch (params.connectAs()) {
             case Sequencer:
                 this.transportSession = new SequencerTransportWorker(params, transport, consensusStateHolder, instanceInfo);
@@ -28,6 +31,11 @@ public class SequencerModule implements Module {
     @Override
     public ModuleName name() {
         return Sequencer;
+    }
+
+    @Override
+    public InstanceInfo instanceInfo() {
+        return instanceInfo;
     }
 
     @Override

@@ -13,6 +13,11 @@ public class CompositeModule implements Module {
         return Composite;
     }
 
+    @Override
+    public InstanceInfo instanceInfo() {
+        return null;
+    }
+
     private List<Module> modules = new ArrayList<>(20);
 
     public void add(Module module) {

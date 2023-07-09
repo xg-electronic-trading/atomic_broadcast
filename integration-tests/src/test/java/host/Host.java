@@ -22,8 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import static atomic_broadcast.aeron.AeronModule.*;
-import static atomic_broadcast.utils.App.AlgoContainer;
-import static atomic_broadcast.utils.App.Sequencer;
+import static atomic_broadcast.utils.App.*;
 
 public class Host {
 
@@ -60,8 +59,9 @@ public class Host {
                 .clock(clock);
     }
 
-    public Host deployMediaDriver() {
-        mediaDriver = new AeronModule(params);
+    public Host deployMediaDriver(int instance) {
+        InstanceInfo instanceInfo = new InstanceInfo(MediaDriver, "localhost", instance);
+        mediaDriver = new AeronModule(params, instanceInfo);
         modules.add(mediaDriver);
         return this;
     }
