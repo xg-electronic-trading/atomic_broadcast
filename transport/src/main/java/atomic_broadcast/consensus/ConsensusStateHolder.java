@@ -11,7 +11,7 @@ public class ConsensusStateHolder {
     private final Log log = LogFactory.getLog(this.getClass().getName());
 
     private final InstanceInfo instanceInfo;
-    private ClusterTransportState state;
+    private ClusterTransportState state = NoState;
     private boolean requestedVote;
     private long noOfActiveClusterMembers = 1;
     private int leaderInstance = -1;
@@ -21,6 +21,10 @@ public class ConsensusStateHolder {
     }
 
     public void setLeaderInstance(int instanceId) { this.leaderInstance = instanceId; }
+
+    public void resetLeaderInstance() {
+        setLeaderInstance(-1);
+    }
 
     public void setRequestedVote(boolean requestedVote) {
         this.requestedVote = requestedVote;

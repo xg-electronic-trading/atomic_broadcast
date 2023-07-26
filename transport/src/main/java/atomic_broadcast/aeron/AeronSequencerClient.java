@@ -12,10 +12,14 @@ import io.aeron.*;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.ReplayMerge;
 import io.aeron.archive.codecs.RecordingSignal;
+import io.aeron.driver.Configuration;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.FragmentHandler;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
+import time.Clock;
+
+import java.util.PrimitiveIterator;
 
 import static atomic_broadcast.aeron.AeronModule.*;
 import static io.aeron.Publication.*;
@@ -28,17 +32,18 @@ public class AeronSequencerClient implements SequencerClient {
     private static final int PUBLICATION_TAG = 2;
 
     private final InstanceInfo instanceInfo;
+    private final Clock clock;
     private final AeronClient aeronClient;
     private final TransportParams params;
     private final ConsensusStateHolder consensusState;
     private RecordingDescriptor latestRecording;
     private Subscription subscription;
     private Publication publication;
-    private ReplayMerge replayMerge;
     private FragmentHandler fragmentHandler;
     private Long2ObjectHashMap<ClusterMember> clusterMembers;
     private long position = -1;
     private final BufferClaim bufferClaim = new BufferClaim();
+    private long addPublicationDelay = Aeron.NULL_VALUE;
 
     private final String commandStreamSubscriptionChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
@@ -46,6 +51,7 @@ public class AeronSequencerClient implements SequencerClient {
             .build();
 
     private String publicationChannel;
+    private ChannelUriStringBuilder extendPublicationBuilder;
 
     ChannelUriStringBuilder manualSubscriptionChannel = new ChannelUriStringBuilder()
             .media(CommonContext.UDP_MEDIA)
@@ -66,7 +72,8 @@ public class AeronSequencerClient implements SequencerClient {
                                 TransportParams params,
                                 ConsensusStateHolder consensusState,
                                 ClientSeqNumWriter seqNumWriter,
-                                Long2ObjectHashMap<ClusterMember> clusterMembers
+                                Long2ObjectHashMap<ClusterMember> clusterMembers,
+                                Clock clock
                                 ) {
         this.instanceInfo = instanceInfo;
         this.aeronClient = aeronClient;
@@ -74,7 +81,9 @@ public class AeronSequencerClient implements SequencerClient {
         this.consensusState = consensusState;
         this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(this, params.listeners(), seqNumWriter, params.instanceId()));
         this.clusterMembers = clusterMembers;
+        this.clock = clock;
         createEventStreamPublicationChannel();
+        createEventStreamExtendPublicationChannel();
     }
 
     private void createEventStreamPublicationChannel() {
@@ -83,6 +92,13 @@ public class AeronSequencerClient implements SequencerClient {
                 .controlEndpoint(instanceInfo.hostname() + ":" + EVENT_STREAM_CONTROL_PORT) //change this to endpoint and remove control mode when using multicast
                 .controlMode(CommonContext.MDC_CONTROL_MODE_DYNAMIC)
                 .build();
+    }
+
+    private void createEventStreamExtendPublicationChannel() {
+        extendPublicationBuilder = new ChannelUriStringBuilder()
+                .media(CommonContext.UDP_MEDIA)
+                .controlEndpoint(instanceInfo.hostname() + ":" + EVENT_STREAM_CONTROL_PORT) //change this to endpoint and remove control mode when using multicast
+                .controlMode(CommonContext.MDC_CONTROL_MODE_DYNAMIC);
     }
 
     @Override
@@ -101,8 +117,20 @@ public class AeronSequencerClient implements SequencerClient {
         switch (params.connectUsing()) {
             case Multicast:
             case Unicast:
-                latestRecording = aeronClient.findActiveRecording();
-                if (latestRecording.recordingId() != Aeron.NULL_VALUE) {
+                boolean isLeader = consensusState.isLeader();
+                latestRecording = isLeader ? aeronClient.findRecording() : aeronClient.findActiveRecording();
+                boolean recordingAvailable = Aeron.NULL_VALUE != latestRecording.recordingId();
+
+                if (isLeader) {
+                    /**
+                     * leader can skip replay if start position >= stop position
+                     */
+                    return leaderStartFixedReplay(recordingAvailable);
+                } else {
+                    return followerStartOpenEndedReplay(recordingAvailable);
+                }
+
+/*                if (latestRecording.recordingId() != Aeron.NULL_VALUE) {
                     if (null == subscription) {
                         String subscriptionChannel = manualSubscriptionChannel
                                 .sessionId(latestRecording.sessionId())
@@ -117,16 +145,88 @@ public class AeronSequencerClient implements SequencerClient {
                         String replayChannel = udpReplayChannel
                                 .endpoint(resolvedEndpoint)
                                 .build();
-                        return aeronClient.startOpenEndedReplay(latestRecording, replayChannel);
+
+                        if (isLeader) {
+                            if (startGreaterThanStopPosition(latestRecording.startPosition(), latestRecording.stopPosition())) {
+                                log.info().append("app: ").append(instanceInfo.app())
+                                        .append(", instance: ").append(instanceInfo.instance())
+                                        .appendLast(", skipping replay as startPosition >= stopPosition");
+                                return true;
+                            } else {
+                                return aeronClient.startReplay(latestRecording, replayChannel);
+                            }
+                        } else {
+                            return aeronClient.startOpenEndedReplay(latestRecording, replayChannel);
+                        }
                     }
                 }
-                break;
+                break;*/
             case Ipc:
             case Journal:
                 return false;
         }
 
         return false;
+    }
+
+    private boolean followerStartOpenEndedReplay(boolean isRecordingAvailable) {
+        boolean started = false;
+        if (isRecordingAvailable) {
+            String replayChannel = addReplaySubscription();
+            if (null != replayChannel) {
+                started = aeronClient.startOpenEndedReplay(latestRecording, replayChannel);
+            }
+        }
+
+        return started;
+    }
+
+    private boolean leaderStartFixedReplay(boolean recordingAvailable) {
+        boolean started = false;
+        boolean skipReplay = startGreaterThanStopPosition(latestRecording.startPosition(), latestRecording.stopPosition());
+
+        if (skipReplay) {
+            log.info().append("app: ").append(instanceInfo.app())
+                    .append(", instance: ").append(instanceInfo.instance())
+                    .appendLast(", skipping replay as startPosition >= stopPosition");
+            started = true;
+        } else {
+            if (recordingAvailable) {
+                String replayChannel = addReplaySubscription();
+                if (null != replayChannel) {
+                    started = aeronClient.startReplay(latestRecording, replayChannel);
+                }
+            }
+        }
+        return started;
+    }
+
+    /**
+     *
+     * @return - return replay channel for replay subscription.
+     */
+    private String addReplaySubscription() {
+        if (null == subscription) {
+            String subscriptionChannel = manualSubscriptionChannel
+                    .sessionId(latestRecording.sessionId())
+                    .build();
+            subscription = aeronClient.addSubscription(subscriptionChannel, EVENT_STREAM_ID);
+            subscription.asyncAddDestination(udpReplayDestinationChannel);
+        }
+
+        String resolvedEndpoint = subscription.resolvedEndpoint();
+
+        boolean replayInitialised = null != resolvedEndpoint;
+
+        String replayChannel = null;
+
+        if (replayInitialised) {
+            replayChannel = udpReplayChannel
+                    .endpoint(resolvedEndpoint)
+                    .build();
+        }
+
+        return replayChannel;
     }
 
     @Override
@@ -136,9 +236,41 @@ public class AeronSequencerClient implements SequencerClient {
 
     @Override
     public boolean pollReplay() {
-        aeronClient.checkReplicationDone();
-        subscription.poll(fragmentHandler, FRAGMENT_LIMIT);
-        return true;
+        if (consensusState.isLeader()) {
+            boolean isDone = false;
+            boolean isRecordingStopped = false;
+            boolean noSubscriptionToPoll = false;
+
+            if (null != subscription) {
+                subscription.poll(fragmentHandler, FRAGMENT_LIMIT);
+                int sessionId = (int) aeronClient.replaySessionId();
+                Image image = subscription.imageBySessionId(sessionId);
+
+                if (null != image) {
+                    isDone = image.position() >= latestRecording.stopPosition();
+                } else {
+                    isRecordingStopped = aeronClient.pollForRecordingSignal(RecordingSignal.STOP);
+                }
+            } else {
+                noSubscriptionToPoll = true;
+            }
+
+            if (isDone) {
+                aeronClient.closeReplay();
+                return true;
+            } else if (noSubscriptionToPoll) {
+                log.info().append("app: ").append(instanceInfo.app())
+                        .append(", instance: ").append(instanceInfo.instance())
+                        .appendLast(", no replay subscription to poll");
+                return true;
+            } else {
+                return isRecordingStopped;
+            }
+        } else {
+            aeronClient.checkReplicationDone();
+            subscription.poll(fragmentHandler, FRAGMENT_LIMIT);
+            return true;
+        }
     }
 
     @Override
@@ -184,16 +316,57 @@ public class AeronSequencerClient implements SequencerClient {
         return true;
     }
 
+    private boolean delayAddPublication() {
+        if (addPublicationDelay != Aeron.NULL_VALUE) {
+            return clock.nanoTime() <= addPublicationDelay;
+        }
+
+        addPublicationDelay = clock.nanoTime() + Configuration.publicationLingerTimeoutNs();
+        return true;
+    }
+
     @Override
     public boolean createEventStream() {
-        if (null == publication) {
-            publication = aeronClient.addExclusivePublication(publicationChannel, EVENT_STREAM_ID);
-            log.info().append("app: ").append(instanceInfo.app())
-                    .append(", instance: ").append(instanceInfo.instance())
-                    .append(", publication session-id: ").appendLast(publication.sessionId());
-            return publication != null;
+        boolean delayPublication = delayAddPublication();
+        if (delayPublication) {
+            return false;
         } else {
-            return true;
+            if (null == publication) {
+                publication = aeronClient.addExclusivePublication(publicationChannel, EVENT_STREAM_ID);
+                log.info().append("app: ").append(instanceInfo.app())
+                        .append(", instance: ").append(instanceInfo.instance())
+                        .append(", publication session-id: ").appendLast(publication.sessionId());
+                return publication != null;
+            } else {
+                return true;
+            }
+        }
+    }
+
+    @Override
+    public boolean extendEventStream() {
+        boolean delayPublication = delayAddPublication();
+        if (delayPublication) {
+            return false;
+        } else {
+            if (null == publication) {
+                boolean journalFound = findJournal();
+                if (journalFound) {
+                    String extendPublicationChannel = extendPublicationBuilder
+                            .initialPosition(latestRecording.stopPosition(), latestRecording.initialTermId(), latestRecording.termBufferLength())
+                            .mtu(latestRecording.mtuLength())
+                            .build();
+                    publication = aeronClient.addExclusivePublication(extendPublicationChannel, EVENT_STREAM_ID);
+                    log.info().append("app: ").append(instanceInfo.app())
+                            .append(", instance: ").append(instanceInfo.instance())
+                            .append(", extended publication session-id: ").appendLast(publication.sessionId());
+                    return publication != null;
+                } else {
+                    return false;
+                }
+            } else {
+                return true;
+            }
         }
     }
 
@@ -206,6 +379,16 @@ public class AeronSequencerClient implements SequencerClient {
             return false;
         }
 
+    }
+
+    @Override
+    public boolean extendEventJournal() {
+        boolean isExtended = aeronClient.extendRecording(latestRecording.recordingId(), publicationChannel, EVENT_STREAM_ID);
+        if (isExtended) {
+            return aeronClient.pollForRecordingSignal(RecordingSignal.EXTEND);
+        } else {
+            return false;
+        }
     }
 
     @Override
@@ -297,6 +480,10 @@ public class AeronSequencerClient implements SequencerClient {
         return true;
     }
 
+    private boolean startGreaterThanStopPosition(long startPosition, long stopPosition) {
+        return startPosition >= stopPosition;
+    }
+
     @Override
     public void close() {
         aeronClient.closeReplay();
@@ -306,5 +493,6 @@ public class AeronSequencerClient implements SequencerClient {
         aeronClient.closePublication(publication);
         subscription = null;
         publication = null;
+        addPublicationDelay = Aeron.NULL_VALUE;
     }
 }

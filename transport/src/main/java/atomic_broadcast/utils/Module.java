@@ -6,6 +6,8 @@ public interface Module {
 
     InstanceInfo instanceInfo();
 
+    boolean isStarted();
+
     void start();
 
     void close();

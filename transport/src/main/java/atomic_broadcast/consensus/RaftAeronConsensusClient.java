@@ -198,6 +198,7 @@ public class RaftAeronConsensusClient implements ConsensusTransportClient {
 
     @Override
     public void close() throws Exception {
-
+        aeronClient.closeSubscription(consensusSubscription);
+        consensusSubscription = null;
     }
 }

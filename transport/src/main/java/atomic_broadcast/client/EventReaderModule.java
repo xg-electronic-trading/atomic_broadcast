@@ -21,8 +21,10 @@ public class EventReaderModule implements Module {
     private final MessageListener listener;
     private final TransportWorker transportSession;
     private RingBufferEventsReader eventsFromRingBufferReader;
-
     private EventReaderType eventReaderType;
+
+    private boolean started;
+
 
     public EventReaderModule(TransportClient transportClient,
                              TransportParams params,
@@ -65,13 +67,20 @@ public class EventReaderModule implements Module {
     }
 
     @Override
+    public boolean isStarted() {
+        return started;
+    }
+
+    @Override
     public void start() {
         transportSession.start();
+        started = true;
     }
 
     @Override
     public void close() {
         transportSession.close();
+        started = false;
     }
 
     public Pollable transport() {

@@ -10,10 +10,8 @@ import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.codecs.RecordingSignal;
 import io.aeron.archive.codecs.SourceLocation;
 import org.agrona.CloseHelper;
-import org.agrona.ErrorHandler;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SleepingMillisIdleStrategy;
-import org.checkerframework.checker.units.qual.A;
 
 import java.io.File;
 import java.util.Comparator;
@@ -28,6 +26,8 @@ import static atomic_broadcast.utils.ModuleName.AeronClient;
 public class AeronClient implements Module {
 
     Log log = LogFactory.getLog(this.getClass().getName());
+
+    private boolean started = false;
 
     public static final String LOCAL_ENDPOINT = "aeron:udp?endpoint=localhost:";
     public static final String REMOTE_ENDPOINT = "aeron:udp?endpoint=somehost:";
@@ -67,6 +67,11 @@ public class AeronClient implements Module {
         return instanceInfo;
     }
 
+    @Override
+    public boolean isStarted() {
+        return started;
+    }
+
 
     @Override
     public void start() {
@@ -78,6 +83,7 @@ public class AeronClient implements Module {
                         .errorHandler(aeronErrorHandler));
 
         log.info().appendLast("connected to media driver");
+        started = true;
     }
 
     private void awaitTillAeronDirExists() {
@@ -99,6 +105,7 @@ public class AeronClient implements Module {
         log.info().appendLast("closed src archive");
         log.info().appendLast("closed local archive");
         log.info().appendLast("closed aeron");
+        started = false;
     }
 
     private AeronArchive.Context createNewArchiveCtx(String controlRequestChannel, AeronErrorHandler errorHandler) {
@@ -239,10 +246,32 @@ public class AeronClient implements Module {
         return replaySessionId != Aeron.NULL_VALUE;
     }
 
+    public boolean startReplay(RecordingDescriptor latestRecording, String replayChannel) {
+        if (Aeron.NULL_VALUE == replaySessionId) {
+            replaySessionId = aeronArchive.startReplay(
+                    latestRecording.recordingId(),
+                    latestRecording.startPosition(),
+                    latestRecording.stopPosition(),
+                    replayChannel,
+                    EVENT_STREAM_ID
+            );
+        }
+
+        return replaySessionId != Aeron.NULL_VALUE;
+    }
+
     public void closeReplay() {
         if (Aeron.NULL_VALUE != replaySessionId) {
             aeronArchive.stopReplay(replaySessionId);
             replicationSessionId = Aeron.NULL_VALUE;
+        }
+    }
+
+    public long replaySessionId() {
+        if (Aeron.NULL_VALUE != replaySessionId){
+            return replaySessionId;
+        } else {
+            throw new IllegalStateException("replay session id is null");
         }
     }
 
@@ -257,6 +286,8 @@ public class AeronClient implements Module {
     public void closeSubscription(Subscription subscription) {
         if (null != subscription) {
             subscription.close();
+            log.info().append("closed subscription: ").append(subscription.channel())
+                    .append(":").appendLast(subscription.streamId());
         }
     }
 
@@ -279,6 +310,8 @@ public class AeronClient implements Module {
     public void closePublication(Publication publication) {
         if (null != publication) {
             publication.close();
+            log.info().append("closed publication: ").append(publication.channel())
+                    .append(":").appendLast(publication.streamId());
         }
     }
 
@@ -288,6 +321,14 @@ public class AeronClient implements Module {
         }
 
         return Aeron.NULL_VALUE != recordingSubscriptionId;
+    }
+
+    public boolean extendRecording(long recordingId, String channel, int stream) {
+        if (Aeron.NULL_VALUE == recordingSubscriptionId) {
+            recordingSubscriptionId = aeronArchive.extendRecording(recordingId, channel, stream, SourceLocation.LOCAL);
+        }
+
+        return  Aeron.NULL_VALUE != recordingSubscriptionId;
     }
 
     public void closeRecording() {

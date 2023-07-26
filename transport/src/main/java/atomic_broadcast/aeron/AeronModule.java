@@ -24,6 +24,8 @@ public class AeronModule implements Module {
 
     Log log = LogFactory.getLog(this.getClass().getName());
 
+    private boolean started = false;
+
     public static final String REPLICATION_CHANNEL = "aeron:udp?endpoint=localhost:0";
     public static final String LOCAL_ENDPOINT = "aeron:udp?endpoint=localhost:";
     public static final String CONTROL_RESPONSE_CHANNEL = "aeron:udp?endpoint=localhost:0";
@@ -52,6 +54,11 @@ public class AeronModule implements Module {
     @Override
     public InstanceInfo instanceInfo() {
         return instanceInfo;
+    }
+
+    @Override
+    public boolean isStarted() {
+        return started;
     }
 
     @Override
@@ -96,6 +103,7 @@ public class AeronModule implements Module {
 
         archivingMediaDriver = ArchivingMediaDriver.launch(ctx, archiveCtx);
         log.info().append("launched media driver with request port: ").appendLast(params.archiveRequestPort());
+        started = true;
     }
 
     @Override
@@ -107,6 +115,7 @@ public class AeronModule implements Module {
 
         log.info().appendLast("closed aeron");
         log.info().appendLast("closed media driver");
+        started = false;
     }
 
     private void deletearchiveDir() {

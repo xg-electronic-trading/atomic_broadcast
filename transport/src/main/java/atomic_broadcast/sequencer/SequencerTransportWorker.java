@@ -18,7 +18,8 @@ public class SequencerTransportWorker implements TransportWorker {
     private final ConsensusStateHolder consensusStateHolder;
     private final TransportParams params;
     private final SequencerClient transportClient;
-    private boolean active = false;
+
+    private String lastExceptionMessage = "";
 
     private TransportState state = NoState;
 
@@ -42,7 +43,7 @@ public class SequencerTransportWorker implements TransportWorker {
     public void close() {
         try {
             transportClient.close();
-            setState(NoState);
+            setState(Stopped);
         } catch (Exception e){
             log.error().append("error whilst closing: ").appendLast(e);
         }
@@ -50,42 +51,60 @@ public class SequencerTransportWorker implements TransportWorker {
 
     @Override
     public void poll() {
-        switch (state) {
-            case NoState:
-                break;
-            case FindLeader:
-                determineLeader();
-                break;
-            case ConnectToJournalSource:
-                connectToJournalSource();
-                break;
-            case FindJournal:
-                findJournal();
-                break;
-            case CreateEventStream:
-                createEventStream();
-                break;
-            case CreateEventJournal:
-                createNewJournal();
-                break;
-            case ConnectToCommandStream:
-                connectToCommandStream();
-                break;
-            case PollCommandStream:
-                pollCommandStream();
-                break;
-            case StartReplication:
-                startReplication();
-                break;
-            case StopRepliaction:
-                stopReplication();
-                break;
-            case StartReplay:
-                startReplay();
-                break;
-            case PollReplay:
-                pollReplay();
-                break;
+        try {
+            switch (state) {
+                case NoState:
+                case Stopped:
+                    break;
+                case FindLeader:
+                    determineLeader();
+                    break;
+                case ConnectToJournalSource:
+                    connectToJournalSource();
+                    break;
+                case FindJournal:
+                    findJournal();
+                    break;
+                case CreateEventStream:
+                    createEventStream();
+                    break;
+                case ExtendEventStream:
+                    extendEventStream();
+                    break;
+                case CreateEventJournal:
+                    createNewJournal();
+                    break;
+                case ExtendEventJournal:
+                    extendEventJournal();
+                    break;
+                case ConnectToCommandStream:
+                    connectToCommandStream();
+                    break;
+                case PollCommandStream:
+                    pollCommandStream();
+                    break;
+                case StartReplication:
+                    startReplication();
+                    break;
+                case StopRepliaction:
+                    stopReplication();
+                    break;
+                case StartReplay:
+                    startReplay();
+                    break;
+                case PollReplay:
+                    pollReplay();
+                    break;
+            }
+        } catch (Exception e) {
+            if (!lastExceptionMessage.equals(e.getMessage())) {
+                log.error().append("app: ").append(instanceInfo.app())
+                        .append(", instance: ").append(instanceInfo.instance())
+                        .append(", state: ").append(state)
+                        .append(", exception").appendLast(e.getMessage());
+
+                lastExceptionMessage = e.getMessage();
+            }
         }
     }
 
@@ -96,9 +115,6 @@ public class SequencerTransportWorker implements TransportWorker {
 
     private void determineLeader() {
         if(consensusStateHolder.isLeaderAssigned()) {
-            if (consensusStateHolder.isLeader()) {
-                active = true;
-            }
             setState(ConnectToJournalSource);
         }
     }
@@ -113,14 +129,15 @@ public class SequencerTransportWorker implements TransportWorker {
 
     private void findJournal() {
         boolean journalFound = transportClient.findJournal();
+        boolean isLeader = consensusStateHolder.isLeader();
         if (!journalFound) {
-            if (active) {
+            if (isLeader) {
                 setState(CreateEventStream);
             } else {
                 setState(StartReplication);
             }
         } else {
-            if (active) {
+            if (isLeader) {
                 setState(StartReplay);
             } else {
                 setState(StartReplication);
@@ -135,10 +152,24 @@ public class SequencerTransportWorker implements TransportWorker {
         }
     }
 
+    private void extendEventStream() {
+        boolean eventStreamExtended = transportClient.extendEventStream();
+        if (eventStreamExtended) {
+            setState(ExtendEventJournal);
+        }
+    }
+
     private void createNewJournal() {
         boolean isJournalCreated = transportClient.createEventJournal();
         if (isJournalCreated) {
            setState(ConnectToCommandStream);
+        }
+    }
+
+    private void extendEventJournal() {
+        boolean isJournalExtended = transportClient.extendEventJournal();
+        if (isJournalExtended) {
+            setState(ConnectToCommandStream);
         }
     }
 
@@ -175,7 +206,14 @@ public class SequencerTransportWorker implements TransportWorker {
     }
 
     private void pollReplay() {
-        transportClient.pollReplay();
+        if (consensusStateHolder.isLeader()) {
+            boolean isDone = transportClient.pollReplay();
+            if (isDone) {
+                setState(ExtendEventStream);
+            }
+        } else {
+            transportClient.pollReplay();
+        }
     }
 
     private void setState(TransportState newState) {

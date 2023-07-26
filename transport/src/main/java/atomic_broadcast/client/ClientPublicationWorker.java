@@ -34,7 +34,7 @@ public class ClientPublicationWorker implements TransportWorker {
     public void close() {
         try {
             commandPublisher.close();
-            setState(NoState);
+            setState(Stopped);
         } catch (Exception e) {
             log.error().append("error whilst closing: ").appendLast(e);
         }
@@ -52,6 +52,9 @@ public class ClientPublicationWorker implements TransportWorker {
                 break;
             case ConnectedToCommandStream:
                 monitorConnection();
+                break;
+            case NoState:
+            case Stopped:
                 break;
 
         }

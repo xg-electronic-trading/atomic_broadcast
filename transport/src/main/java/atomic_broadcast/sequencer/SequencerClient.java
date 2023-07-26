@@ -15,7 +15,11 @@ public interface SequencerClient extends EventSubscriber {
 
     boolean createEventStream();
 
+    boolean extendEventStream();
+
     boolean createEventJournal();
+
+    boolean extendEventJournal();
 
     boolean isPublicationConnected();
 

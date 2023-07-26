@@ -36,7 +36,8 @@ public class ConsensusWorker implements TransportWorker {
     public void close() {
         try {
             consensusTransport.close();
-            consensusStateHolder.setState(NoState);
+            consensusStateHolder.setState(Stopped);
+            consensusStateHolder.resetLeaderInstance();
         } catch (Exception e){
             log.error().append("error whilst closing: ").appendLast(e);
         }
@@ -60,6 +61,7 @@ public class ConsensusWorker implements TransportWorker {
                 onLeader();
                 break;
             case NoState:
+            case Stopped:
                 break;
             default:
                 throw new IllegalStateException("unknown cluster transport state: " + consensusStateHolder.getState());
@@ -68,6 +70,7 @@ public class ConsensusWorker implements TransportWorker {
 
     private void onFollower() {
         if (consensusTransport.hasHeartbeatTimeoutExpired()) {
+            resetConsensusStateBeforeElection();
            consensusStateHolder.setState(Candidate);
         } else {
             consensusTransport.pollSubscription();
@@ -77,8 +80,7 @@ public class ConsensusWorker implements TransportWorker {
     private void onCandidate() {
         if (requestedVote) {
             if (consensusTransport.hasHeartbeatTimeoutExpired()) {
-                requestedVote = false;
-                consensusStateHolder.resetActiveClusterMembers();
+                resetConsensusStateBeforeElection();
             } else {
                 consensusTransport.pollSubscription();
             }
@@ -90,5 +92,10 @@ public class ConsensusWorker implements TransportWorker {
     private void onLeader() {
         consensusTransport.pollSubscription();
         consensusTransport.sendHeartbeat();
+    }
+
+    private void resetConsensusStateBeforeElection() {
+        requestedVote = false;
+        consensusStateHolder.resetActiveClusterMembers();
     }
 }

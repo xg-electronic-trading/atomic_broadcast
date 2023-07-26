@@ -11,6 +11,8 @@ public class ClientPublisherModule implements Module {
     private final TransportWorker transportSession;
     private final InstanceInfo instanceInfo;
 
+    private boolean started = false;
+
     public ClientPublisherModule(CommandPublisher commandPublisher,
                                  TransportParams params,
                                  InstanceInfo instanceInfo) {
@@ -37,13 +39,20 @@ public class ClientPublisherModule implements Module {
     }
 
     @Override
+    public boolean isStarted() {
+        return started;
+    }
+
+    @Override
     public void start() {
         transportSession.start();
+        started = true;
     }
 
     @Override
     public void close() {
         transportSession.close();
+        started = false;
     }
 
 

@@ -16,6 +16,8 @@ import static atomic_broadcast.utils.ModuleName.Algo;
 
 public class AlgoModule implements Module {
 
+    private boolean started = false;
+
     private final MessageListener eventListener;
     private final InstanceInfo instanceInfo;
 
@@ -39,17 +41,22 @@ public class AlgoModule implements Module {
     }
 
     @Override
+    public boolean isStarted() {
+        return started;
+    }
+
+    @Override
     public ModuleName name() {
         return Algo;
     }
 
     @Override
     public void start() {
-
+        started = true;
     }
 
     @Override
     public void close() {
-
+        started = false;
     }
 }

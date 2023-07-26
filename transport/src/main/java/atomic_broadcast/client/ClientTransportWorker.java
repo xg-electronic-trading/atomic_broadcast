@@ -34,7 +34,7 @@ public class ClientTransportWorker implements TransportWorker {
     public void close() {
         try {
             transportClient.close();
-            setState(NoState);
+            setState(Stopped);
         } catch (Exception e) {
             log.error().append("error whilst closing: ").appendLast(e);
         }
@@ -53,6 +53,7 @@ public class ClientTransportWorker implements TransportWorker {
     private int doWork() {
         switch (state) {
             case NoState:
+            case Stopped:
                 break;
             case ConnectToJournalSource:
                 connectToJournalSource();

@@ -144,7 +144,8 @@ public class Host {
                 sequencerParams,
                 consensusStateHolder,
                 seqNoClient,
-                clusterMembers);
+                clusterMembers,
+                clock);
 
         sequencer = new SequencerModule(sequencerParams, sequencerClient, consensusStateHolder, instanceInfo);
         pollables.add(sequencer.transport());

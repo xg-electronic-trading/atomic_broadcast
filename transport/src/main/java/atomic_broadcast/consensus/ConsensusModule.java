@@ -11,6 +11,8 @@ public class ConsensusModule implements Module {
     private final ConsensusStateHolder consensusState;
     private final InstanceInfo instanceInfo;
 
+    private boolean started = false;
+
     @Override
     public ModuleName name() {
         return ModuleName.Consensus;
@@ -19,6 +21,11 @@ public class ConsensusModule implements Module {
     @Override
     public InstanceInfo instanceInfo() {
         return instanceInfo;
+    }
+
+    @Override
+    public boolean isStarted() {
+        return started;
     }
 
     public ConsensusModule(ConsensusTransportClient transportClient,
@@ -36,11 +43,13 @@ public class ConsensusModule implements Module {
     @Override
     public void start() {
         worker.start();
+        started = true;
     }
 
     @Override
     public void close() {
         worker.close();
+        started = false;
     }
 
     public ConsensusStateHolder consensusState() {

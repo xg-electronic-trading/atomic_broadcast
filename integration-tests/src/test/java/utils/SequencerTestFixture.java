@@ -252,6 +252,18 @@ public class SequencerTestFixture {
                 );
     }
 
+    public void startMostRecentStoppedSequencer() {
+        hosts.stream()
+                .filter(h -> h.sequencer().state() == Stopped)
+                .forEach(h -> {
+                    log.info().append("starting sequencer on host: ").appendLast(h.hostNum());
+                    h.deploySequencer(
+                            TestTransportParams.createSequencerParams().instance(h.hostNum()),
+                            TestTransportParams.createConsensusParams().instance(h.hostNum()));
+                    h.start();
+                });
+    }
+
     private final Predicate<Module> sequencerAppPred = m -> m.instanceInfo().app() == App.Sequencer;
 
     @AfterEach
