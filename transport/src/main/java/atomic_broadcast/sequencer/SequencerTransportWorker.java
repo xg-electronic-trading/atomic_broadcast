@@ -18,10 +18,13 @@ public class SequencerTransportWorker implements TransportWorker {
     private final ConsensusStateHolder consensusStateHolder;
     private final TransportParams params;
     private final SequencerClient transportClient;
+    private final LeaderTransportWorker leaderWorker;
+    private final FollowerTransportWorker followerWorker;
 
     private String lastExceptionMessage = "";
 
     private TransportState state = NoState;
+    private TransportState innerWorkerState = NoState;
 
     public SequencerTransportWorker(
             TransportParams params,
@@ -32,18 +35,25 @@ public class SequencerTransportWorker implements TransportWorker {
         this.transportClient = transportClient;
         this.consensusStateHolder = consensusStateHolder;
         this.instanceInfo = instanceInfo;
+        this.leaderWorker = new LeaderTransportWorker(instanceInfo, transportClient);
+        this.followerWorker = new FollowerTransportWorker(instanceInfo, transportClient);
     }
 
     @Override
     public void start() {
         setState(FindLeader);
+        leaderWorker.start();
+        followerWorker.start();
     }
 
     @Override
     public void close() {
         try {
             transportClient.close();
+            leaderWorker.close();
+            followerWorker.close();
             setState(Stopped);
+            innerWorkerState = Stopped;
         } catch (Exception e){
             log.error().append("error whilst closing: ").appendLast(e);
         }
@@ -62,38 +72,11 @@ public class SequencerTransportWorker implements TransportWorker {
                 case ConnectToJournalSource:
                     connectToJournalSource();
                     break;
-                case FindJournal:
-                    findJournal();
+                case PollLeader:
+                    pollLeader();
                     break;
-                case CreateEventStream:
-                    createEventStream();
-                    break;
-                case ExtendEventStream:
-                    extendEventStream();
-                    break;
-                case CreateEventJournal:
-                    createNewJournal();
-                    break;
-                case ExtendEventJournal:
-                    extendEventJournal();
-                    break;
-                case ConnectToCommandStream:
-                    connectToCommandStream();
-                    break;
-                case PollCommandStream:
-                    pollCommandStream();
-                    break;
-                case StartReplication:
-                    startReplication();
-                    break;
-                case StopRepliaction:
-                    stopReplication();
-                    break;
-                case StartReplay:
-                    startReplay();
-                    break;
-                case PollReplay:
-                    pollReplay();
+                case PollFollower:
+                    pollFollower();
                     break;
             }
         } catch (Exception e) {
@@ -101,7 +84,7 @@ public class SequencerTransportWorker implements TransportWorker {
                 log.error().append("app: ").append(instanceInfo.app())
                         .append(", instance: ").append(instanceInfo.instance())
                         .append(", state: ").append(state)
-                        .append(", exception").appendLast(e.getMessage());
+                        .append(", exception ").appendLast(e.getMessage());
 
                 lastExceptionMessage = e.getMessage();
             }
@@ -110,7 +93,7 @@ public class SequencerTransportWorker implements TransportWorker {
 
     @Override
     public TransportState state() {
-        return state;
+        return innerWorkerState;
     }
 
     private void determineLeader() {
@@ -121,98 +104,39 @@ public class SequencerTransportWorker implements TransportWorker {
 
     private void connectToJournalSource() {
         if (transportClient.connectToJournalSource()) {
-            setState(FindJournal);
+            if (consensusStateHolder.isLeader()) {
+                setState(PollLeader);
+            } else {
+                setState(PollFollower);
+            }
         } else {
             setState(ConnectToJournalSource);
         }
     }
 
-    private void findJournal() {
-        boolean journalFound = transportClient.findJournal();
-        boolean isLeader = consensusStateHolder.isLeader();
-        if (!journalFound) {
-            if (isLeader) {
-                setState(CreateEventStream);
-            } else {
-                setState(StartReplication);
-            }
-        } else {
-            if (isLeader) {
-                setState(StartReplay);
-            } else {
-                setState(StartReplication);
-            }
-        }
-    }
-
-    private void createEventStream() {
-        boolean eventStreamCreated = transportClient.createEventStream();
-        if (eventStreamCreated) {
-            setState(CreateEventJournal);
-        }
-    }
-
-    private void extendEventStream() {
-        boolean eventStreamExtended = transportClient.extendEventStream();
-        if (eventStreamExtended) {
-            setState(ExtendEventJournal);
-        }
-    }
-
-    private void createNewJournal() {
-        boolean isJournalCreated = transportClient.createEventJournal();
-        if (isJournalCreated) {
-           setState(ConnectToCommandStream);
-        }
-    }
-
-    private void extendEventJournal() {
-        boolean isJournalExtended = transportClient.extendEventJournal();
-        if (isJournalExtended) {
-            setState(ConnectToCommandStream);
-        }
-    }
-
-    private void connectToCommandStream() {
-        boolean isSubscriptionCreated = transportClient.connectToCommandStream();
-        if (isSubscriptionCreated) {
-            setState(PollCommandStream);
-        }
-    }
-
-    private void pollCommandStream() {
-        if (transportClient.isPublicationClosed()) {
-            setState(ConnectToCommandStream);
-        } else {
-            transportClient.pollCommandStream();
-        }
-    }
-
-    private void startReplication() {
-        boolean replicationStarted = transportClient.startReplication();
-        if (replicationStarted) {
-            setState(StartReplay);
-        }
-    }
-
-    private void stopReplication() {
-        boolean isReplicationStopped = transportClient.stopReplication();
-    }
-
-    private void startReplay() {
-        if (transportClient.connectToEventStream()) {
-            setState(PollReplay);
-        }
-    }
-
-    private void pollReplay() {
+    private void pollLeader() {
         if (consensusStateHolder.isLeader()) {
-            boolean isDone = transportClient.pollReplay();
-            if (isDone) {
-                setState(ExtendEventStream);
-            }
+            leaderWorker.poll();
+            innerWorkerState = leaderWorker.state();
         } else {
-            transportClient.pollReplay();
+            /**
+             * close leader worker if leader has been demoted to follower
+             */
+            leaderWorker.close();
+            setState(PollFollower);
+        }
+    }
+
+    private void pollFollower() {
+        if (consensusStateHolder.isLeader()) {
+            /**
+             * close follower worker if been promoted to leader.
+             */
+            followerWorker.close();
+            setState(PollLeader);
+        } else {
+            followerWorker.poll();
+            innerWorkerState = followerWorker.state();
         }
     }
 

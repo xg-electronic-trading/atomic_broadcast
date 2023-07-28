@@ -126,10 +126,10 @@ public class SequencerTestFixture {
         return false;
     };
 
-    public Predicate<Module> pollReplay = m -> {
+    public Predicate<Module> pollOpenEndedReplay = m -> {
         if (m instanceof SequencerModule) {
             SequencerModule seq = (SequencerModule) m;
-            return seq.state() == PollReplay;
+            return seq.state() == PollOpenEndedReplay;
         }
         return false;
     };

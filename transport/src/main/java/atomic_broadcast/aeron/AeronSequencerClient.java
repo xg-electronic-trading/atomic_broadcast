@@ -5,6 +5,7 @@ import atomic_broadcast.consensus.ClusterMember;
 import atomic_broadcast.consensus.ConsensusStateHolder;
 import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.utils.InstanceInfo;
+import atomic_broadcast.utils.ReplayState;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
@@ -22,6 +23,7 @@ import time.Clock;
 import java.util.PrimitiveIterator;
 
 import static atomic_broadcast.aeron.AeronModule.*;
+import static atomic_broadcast.utils.ReplayState.*;
 import static io.aeron.Publication.*;
 import static io.aeron.archive.client.RecordingSignalPoller.FRAGMENT_LIMIT;
 
@@ -109,58 +111,44 @@ public class AeronSequencerClient implements SequencerClient {
     @Override
     public boolean findJournal() {
         latestRecording = aeronClient.findRecording();
-        return latestRecording.recordingId() != Aeron.NULL_VALUE;
+        boolean journalFound = latestRecording.recordingId() != Aeron.NULL_VALUE;
+
+        if (journalFound) {
+            log.info().append("app: ").append(instanceInfo.app())
+                    .append(", instance: ").append(instanceInfo.instance())
+                    .append(", recording: ").appendLast(latestRecording);
+        }
+
+        return journalFound;
     }
 
     @Override
     public boolean connectToEventStream() {
+        return false;
+    }
+
+    public ReplayState startReplay() {
         switch (params.connectUsing()) {
             case Multicast:
             case Unicast:
-                boolean isLeader = consensusState.isLeader();
-                latestRecording = isLeader ? aeronClient.findRecording() : aeronClient.findActiveRecording();
+                latestRecording = aeronClient.findRecording();
                 boolean recordingAvailable = Aeron.NULL_VALUE != latestRecording.recordingId();
+                return startFixedReplay(recordingAvailable);
+            case Ipc:
+            case Journal:
+                return NotStarted;
+        }
 
-                if (isLeader) {
-                    /**
-                     * leader can skip replay if start position >= stop position
-                     */
-                    return leaderStartFixedReplay(recordingAvailable);
-                } else {
-                    return followerStartOpenEndedReplay(recordingAvailable);
-                }
+        return NotStarted;
+    }
 
-/*                if (latestRecording.recordingId() != Aeron.NULL_VALUE) {
-                    if (null == subscription) {
-                        String subscriptionChannel = manualSubscriptionChannel
-                                .sessionId(latestRecording.sessionId())
-                                .build();
-                        subscription = aeronClient.addSubscription(subscriptionChannel, EVENT_STREAM_ID);
-                        subscription.asyncAddDestination(udpReplayDestinationChannel);
-                    }
-
-                    String resolvedEndpoint = subscription.resolvedEndpoint();
-
-                    if (null != resolvedEndpoint) {
-                        String replayChannel = udpReplayChannel
-                                .endpoint(resolvedEndpoint)
-                                .build();
-
-                        if (isLeader) {
-                            if (startGreaterThanStopPosition(latestRecording.startPosition(), latestRecording.stopPosition())) {
-                                log.info().append("app: ").append(instanceInfo.app())
-                                        .append(", instance: ").append(instanceInfo.instance())
-                                        .appendLast(", skipping replay as startPosition >= stopPosition");
-                                return true;
-                            } else {
-                                return aeronClient.startReplay(latestRecording, replayChannel);
-                            }
-                        } else {
-                            return aeronClient.startOpenEndedReplay(latestRecording, replayChannel);
-                        }
-                    }
-                }
-                break;*/
+    public boolean startTailEventJournal() {
+        switch (params.connectUsing()) {
+            case Multicast:
+            case Unicast:
+                latestRecording = aeronClient.findActiveRecording();
+                boolean recordingAvailable = Aeron.NULL_VALUE != latestRecording.recordingId();
+                return startOpenEndedReplay(recordingAvailable);
             case Ipc:
             case Journal:
                 return false;
@@ -169,7 +157,7 @@ public class AeronSequencerClient implements SequencerClient {
         return false;
     }
 
-    private boolean followerStartOpenEndedReplay(boolean isRecordingAvailable) {
+    private boolean startOpenEndedReplay(boolean isRecordingAvailable) {
         boolean started = false;
         if (isRecordingAvailable) {
             String replayChannel = addReplaySubscription();
@@ -181,24 +169,26 @@ public class AeronSequencerClient implements SequencerClient {
         return started;
     }
 
-    private boolean leaderStartFixedReplay(boolean recordingAvailable) {
-        boolean started = false;
+    private ReplayState startFixedReplay(boolean recordingAvailable) {
+        ReplayState state = NotStarted;
         boolean skipReplay = startGreaterThanStopPosition(latestRecording.startPosition(), latestRecording.stopPosition());
 
         if (skipReplay) {
             log.info().append("app: ").append(instanceInfo.app())
                     .append(", instance: ").append(instanceInfo.instance())
                     .appendLast(", skipping replay as startPosition >= stopPosition");
-            started = true;
+            state = Skipped;
         } else {
             if (recordingAvailable) {
                 String replayChannel = addReplaySubscription();
                 if (null != replayChannel) {
-                    started = aeronClient.startReplay(latestRecording, replayChannel);
+                    if (aeronClient.startReplay(latestRecording, replayChannel)) {
+                        state = Started;
+                    };
                 }
             }
         }
-        return started;
+        return state;
     }
 
     /**
@@ -222,6 +212,7 @@ public class AeronSequencerClient implements SequencerClient {
 
         if (replayInitialised) {
             replayChannel = udpReplayChannel
+                    .sessionId(latestRecording.sessionId())
                     .endpoint(resolvedEndpoint)
                     .build();
         }
@@ -236,38 +227,33 @@ public class AeronSequencerClient implements SequencerClient {
 
     @Override
     public boolean pollReplay() {
-        if (consensusState.isLeader()) {
-            boolean isDone = false;
-            boolean isRecordingStopped = false;
-            boolean noSubscriptionToPoll = false;
+        boolean isDone = false;
 
-            if (null != subscription) {
-                subscription.poll(fragmentHandler, FRAGMENT_LIMIT);
-                int sessionId = (int) aeronClient.replaySessionId();
-                Image image = subscription.imageBySessionId(sessionId);
+        if (null != subscription) {
+            subscription.poll(fragmentHandler, FRAGMENT_LIMIT);
+            int sessionId = (int) aeronClient.replaySessionId();
+            Image image = subscription.imageBySessionId(sessionId);
 
-                if (null != image) {
-                    isDone = image.position() >= latestRecording.stopPosition();
-                } else {
-                    isRecordingStopped = aeronClient.pollForRecordingSignal(RecordingSignal.STOP);
-                }
-            } else {
-                noSubscriptionToPoll = true;
+            if (null != image) {
+                isDone = image.position() >= latestRecording.stopPosition();
             }
+        }
 
-            if (isDone) {
-                aeronClient.closeReplay();
-                return true;
-            } else if (noSubscriptionToPoll) {
-                log.info().append("app: ").append(instanceInfo.app())
-                        .append(", instance: ").append(instanceInfo.instance())
-                        .appendLast(", no replay subscription to poll");
-                return true;
-            } else {
-                return isRecordingStopped;
-            }
+        if (isDone) {
+            aeronClient.closeReplay();
+        }
+
+        return isDone;
+    }
+
+    @Override
+    public boolean pollJournal() {
+        boolean isStopped = aeronClient.pollForRecordingSignal(RecordingSignal.STOP);
+        if (isStopped) {
+            subscription.close();
+            subscription = null;
+            return false;
         } else {
-            aeronClient.checkReplicationDone();
             subscription.poll(fragmentHandler, FRAGMENT_LIMIT);
             return true;
         }
@@ -300,11 +286,16 @@ public class AeronSequencerClient implements SequencerClient {
     }
 
     @Override
+    public boolean isReplayActive() {
+        return Aeron.NULL_VALUE != aeronClient.replaySessionId() && subscription.isConnected();
+    }
+
+    @Override
     public boolean startReplication() {
         ClusterMember leader = clusterMembers.get(consensusState.getLeaderInstance());
         boolean started = aeronClient.startReplication(params, latestRecording, leader);
         if (started) {
-            return aeronClient.pollForRecordingSignal(RecordingSignal.MERGE);
+            return aeronClient.checkReplicationDone();
         } else {
             return false;
         }
@@ -433,25 +424,6 @@ public class AeronSequencerClient implements SequencerClient {
     @Override
     public long position() {
         return position;
-    }
-
-    private ReplayMerge replayMerge(long recordingId,
-                                    String subscriptionChannel,
-                                    String replayChannel,
-                                    String replayDestination,
-                                    String liveDestination,
-                                    AeronArchive aeronArchive) {
-        subscription = aeronClient.addSubscription(subscriptionChannel, EVENT_STREAM_ID);
-
-        return new ReplayMerge(
-                subscription,
-                aeronArchive,
-                replayChannel,
-                replayDestination,
-                liveDestination,
-                recordingId,
-                0
-        );
     }
 
     private boolean processResult(long publicationResult) {

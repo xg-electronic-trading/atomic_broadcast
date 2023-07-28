@@ -20,8 +20,13 @@ public enum TransportState implements CodedEnum {
     PollCommandStream(13),
     PollReplayMerge(14),
     PollReplay(15),
-    ConnectedToCommandStream(16),
-    Stopped(17);
+    PollOpenEndedReplay(16),
+    ConnectedToCommandStream(17),
+    Stopped(18),
+    CheckReplayActive(19),
+
+    PollLeader(20),
+    PollFollower(21);
 
 
 

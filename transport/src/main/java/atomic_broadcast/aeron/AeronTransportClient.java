@@ -111,6 +111,11 @@ public class AeronTransportClient implements TransportClient {
     }
 
     @Override
+    public boolean startTailEventJournal() {
+        return false;
+    }
+
+    @Override
     public boolean pollReplay() {
         if (replayMerge != null) {
             if (!replayMerge.isMerged()) {
@@ -130,6 +135,11 @@ public class AeronTransportClient implements TransportClient {
         } else {
             return true;
         }
+    }
+
+    @Override
+    public boolean pollJournal() {
+        return false;
     }
 
     @Override

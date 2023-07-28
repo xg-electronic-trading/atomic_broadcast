@@ -19,8 +19,6 @@ import java.util.Optional;
 
 import static atomic_broadcast.aeron.AeronModule.*;
 import static atomic_broadcast.aeron.AeronModule.DYNAMIC_ENDPOINT;
-import static atomic_broadcast.utils.ConnectUsing.Multicast;
-import static atomic_broadcast.utils.ConnectUsing.Unicast;
 import static atomic_broadcast.utils.ModuleName.AeronClient;
 
 public class AeronClient implements Module {
@@ -161,7 +159,7 @@ public class AeronClient implements Module {
     private RecordingDescriptor findRecording(AeronArchive archive, boolean requireActive) {
         recordingDescriptorConsumer.getRecordingDescriptors().clear(); //will generate garbage when emptying. not used in steady state
 
-        if (null !=  archive) {
+        if (null != archive) {
             int recordingsFound = archive.listRecordings(0, Integer.MAX_VALUE, recordingDescriptorConsumer);
             if (recordingsFound > 0) {
                 Optional<RecordingDescriptor> recordingOpt = recordingDescriptorConsumer.getRecordingDescriptors()
@@ -216,13 +214,15 @@ public class AeronClient implements Module {
         }
     }
 
-    public void checkReplicationDone() {
+    public boolean checkReplicationDone() {
+        boolean isDone = false;
         if (Aeron.NULL_VALUE != replicationSessionId) {
-            boolean isDone = pollForRecordingSignal(RecordingSignal.REPLICATE_END);
+            isDone = pollForRecordingSignal(RecordingSignal.REPLICATE_END);
             if (isDone) {
                 replicationSessionId = Aeron.NULL_VALUE;
             }
         }
+        return isDone;
     }
 
     /**
