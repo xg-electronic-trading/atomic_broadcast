@@ -35,6 +35,8 @@ public class SequencerTestFixture {
 
     private final List<Host> hosts = new ArrayList<>(10);
 
+    private final static int ElectionTimeoutSecs = 5;
+
     public void before() {
         before(EventReaderType.Direct, 1);
     }
@@ -50,7 +52,12 @@ public class SequencerTestFixture {
             clientParams.withEventReader(eventReaderType).instance(instance);
 
             host.deployMediaDriver(instance)
-                .deploySequencer(TestTransportParams.createSequencerParams().instance(instance), TestTransportParams.createConsensusParams().instance(instance))
+                .deploySequencer(
+                        TestTransportParams.createSequencerParams()
+                                .instance(instance),
+                        TestTransportParams.createConsensusParams()
+                                .instance(instance)
+                                .electionTimeoutSecs(ElectionTimeoutSecs + instance)) // stagger election timeouts.
                 .deployClient(clientParams, new EventPrinter());
 
             hosts.add(host);
@@ -259,7 +266,10 @@ public class SequencerTestFixture {
                     log.info().append("starting sequencer on host: ").appendLast(h.hostNum());
                     h.deploySequencer(
                             TestTransportParams.createSequencerParams().instance(h.hostNum()),
-                            TestTransportParams.createConsensusParams().instance(h.hostNum()));
+                            TestTransportParams.createConsensusParams()
+                                    .instance(h.hostNum())
+                                    .electionTimeoutSecs(ElectionTimeoutSecs + h.hostNum())
+                    );
                     h.start();
                 });
     }

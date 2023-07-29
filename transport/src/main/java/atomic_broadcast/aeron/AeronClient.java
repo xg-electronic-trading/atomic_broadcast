@@ -263,7 +263,13 @@ public class AeronClient implements Module {
     public void closeReplay() {
         if (Aeron.NULL_VALUE != replaySessionId) {
             aeronArchive.stopReplay(replaySessionId);
-            replicationSessionId = Aeron.NULL_VALUE;
+            replaySessionId = Aeron.NULL_VALUE;
+        }
+    }
+
+    public void clearReplaySessionId() {
+        if (Aeron.NULL_VALUE != replaySessionId) {
+            replaySessionId = Aeron.NULL_VALUE;
         }
     }
 

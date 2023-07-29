@@ -129,7 +129,7 @@ public class Host {
                 consensusParams,
                 seqNoClient,
                 consensusStateHolder,
-                5,
+                consensusParams.electionTimeoutSecs(),
                 1);
 
         consensus = new ConsensusModule(consensusTransportClient, consensusStateHolder, instanceInfo);

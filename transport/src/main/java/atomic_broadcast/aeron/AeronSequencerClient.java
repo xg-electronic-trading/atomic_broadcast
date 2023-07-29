@@ -250,6 +250,7 @@ public class AeronSequencerClient implements SequencerClient {
     public boolean pollJournal() {
         boolean isStopped = aeronClient.pollForRecordingSignal(RecordingSignal.STOP);
         if (isStopped) {
+            aeronClient.clearReplaySessionId();
             subscription.close();
             subscription = null;
             return false;

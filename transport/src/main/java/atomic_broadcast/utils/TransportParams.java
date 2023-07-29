@@ -12,6 +12,7 @@ public class TransportParams implements Resettable {
     private EventReaderType eventReaderType;
     private String publicationChannel;
     private int instanceId = -1;
+    private int electionTimeoutSecs = -1;
     private final ArrayList<MessageListener> listeners = new ArrayList<>(10);
 
     public TransportParams() {
@@ -48,6 +49,11 @@ public class TransportParams implements Resettable {
         return this;
     }
 
+    public TransportParams electionTimeoutSecs(int seconds) {
+        this.electionTimeoutSecs = seconds;
+        return this;
+    }
+
 
     public ConnectAs connectAs() {
         return connectAs;
@@ -65,6 +71,8 @@ public class TransportParams implements Resettable {
 
     public String publicationChannel() { return publicationChannel; }
 
+    public int electionTimeoutSecs() { return electionTimeoutSecs; }
+
     @Override
     public void reset() {
         connectAs = ConnectAs.Client;
@@ -72,6 +80,7 @@ public class TransportParams implements Resettable {
         eventReaderType = EventReaderType.Direct;
         publicationChannel = "";
         instanceId = -1;
+        electionTimeoutSecs = -1;
         for (int i = listeners.size() - 1; i > -1; i--) {
             listeners.remove(i);
         }
