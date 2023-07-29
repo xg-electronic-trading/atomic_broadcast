@@ -106,6 +106,11 @@ public class AeronClient implements Module {
         started = false;
     }
 
+    private void closeSrcArchive() {
+        srcAeronArchive.close();
+        srcAeronArchive = null;
+    }
+
     private AeronArchive.Context createNewArchiveCtx(String controlRequestChannel, AeronErrorHandler errorHandler) {
         errorHandler.reset();
         return new AeronArchive.Context()
@@ -199,6 +204,13 @@ public class AeronClient implements Module {
                             remoteArchiveChannel,
                             liveDestination //populate pubchannel to merge back to live stream.
                     );
+
+                    log.info().append("app: ").append(instanceInfo.app())
+                            .append(", instance: ").append(instanceInfo.instance())
+                            .append(", started replication from src archive: ")
+                            .appendLast(remoteArchiveChannel);
+                } else {
+                    closeSrcArchive();
                 }
             }
         }
@@ -220,6 +232,7 @@ public class AeronClient implements Module {
             isDone = pollForRecordingSignal(RecordingSignal.REPLICATE_END);
             if (isDone) {
                 replicationSessionId = Aeron.NULL_VALUE;
+                closeSrcArchive();
             }
         }
         return isDone;

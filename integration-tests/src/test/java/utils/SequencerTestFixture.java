@@ -109,6 +109,19 @@ public class SequencerTestFixture {
         pollUntil(allPollables, () -> allModules.stream().filter(moduleFilter).allMatch(predicate));
     }
 
+    public void pollUntilAllFollowers(Predicate<Module> predicate) {
+        List<Pollable> allPollables = hosts.stream()
+                .flatMap(hosts -> hosts.pollables().stream())
+                .collect(Collectors.toList());
+
+        List<Module> allModules = hosts.stream()
+                .filter(followerPred)
+                .flatMap(host -> host.moduleList().stream())
+                .collect(Collectors.toList());
+
+        pollUntil(allPollables, () -> allModules.stream().filter(m -> m instanceof SequencerModule).allMatch(predicate));
+    }
+
     public Predicate<Module> findLeaderPred = m -> {
         if (m instanceof ConsensusModule) {
             ConsensusModule consensus = (ConsensusModule) m;
@@ -148,6 +161,8 @@ public class SequencerTestFixture {
         }
         return false;
     };
+
+    public Predicate<Host> followerPred = h -> h.consensus().consensusState().isFollower();
 
     public Predicate<Module> pollEventStream = m -> {
         if (m instanceof EventReaderModule) {
@@ -236,7 +251,7 @@ public class SequencerTestFixture {
     }
 
     public void stopFollower() {
-        stopSequencer(h -> !h.consensus().consensusState().isLeader());
+        stopSequencer(followerPred);
     }
 
     private void stopSequencer(Predicate<Host> predicate) {
