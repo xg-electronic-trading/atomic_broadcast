@@ -5,13 +5,12 @@ import atomic_broadcast.consensus.ClusterMember;
 import atomic_broadcast.consensus.ConsensusStateHolder;
 import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.utils.InstanceInfo;
+import atomic_broadcast.utils.JournalState;
 import atomic_broadcast.utils.ReplayState;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import io.aeron.*;
-import io.aeron.archive.client.AeronArchive;
-import io.aeron.archive.client.ReplayMerge;
 import io.aeron.archive.codecs.RecordingSignal;
 import io.aeron.driver.Configuration;
 import io.aeron.logbuffer.BufferClaim;
@@ -20,9 +19,8 @@ import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
 import time.Clock;
 
-import java.util.PrimitiveIterator;
-
 import static atomic_broadcast.aeron.AeronModule.*;
+import static atomic_broadcast.utils.JournalState.*;
 import static atomic_broadcast.utils.ReplayState.*;
 import static io.aeron.Publication.*;
 import static io.aeron.archive.client.RecordingSignalPoller.FRAGMENT_LIMIT;
@@ -109,17 +107,21 @@ public class AeronSequencerClient implements SequencerClient {
     }
 
     @Override
-    public boolean findJournal() {
+    public JournalState findJournal() {
+        JournalState journalState = JournalNotFound;
         latestRecording = aeronClient.findRecording();
         boolean journalFound = latestRecording.recordingId() != Aeron.NULL_VALUE;
 
         if (journalFound) {
+
+            journalState = latestRecording.stopPosition() != Aeron.NULL_VALUE ? InactiveJournal : ActiveJournal;
+
             log.info().append("app: ").append(instanceInfo.app())
                     .append(", instance: ").append(instanceInfo.instance())
                     .append(", recording: ").appendLast(latestRecording);
         }
 
-        return journalFound;
+        return journalState;
     }
 
     @Override
@@ -342,8 +344,8 @@ public class AeronSequencerClient implements SequencerClient {
             return false;
         } else {
             if (null == publication) {
-                boolean journalFound = findJournal();
-                if (journalFound) {
+                JournalState journalState = findJournal();
+                if (journalState == InactiveJournal) {
                     String extendPublicationChannel = extendPublicationBuilder
                             .initialPosition(latestRecording.stopPosition(), latestRecording.initialTermId(), latestRecording.termBufferLength())
                             .mtu(latestRecording.mtuLength())

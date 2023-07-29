@@ -232,31 +232,38 @@ public class SequencerTestFixture {
     }
 
     public void stopLeader() {
-        hosts.stream()
-                .filter(h -> h.consensus().consensusState().isLeader())
-                .forEach(h -> {
-                            List<Module> modulesToClose =  h.modules()
-                                    .getModules()
-                                    .stream()
-                                    .filter(sequencerAppPred)
-                                    .collect(Collectors.toList());
+       stopSequencer(h -> h.consensus().consensusState().isLeader());
+    }
 
-                            Collections.reverse(modulesToClose); //close modules in order of addition.
-                            modulesToClose
-                                    .forEach(m -> {
-                                        log.info().append("closing module: ").appendLast(m.name());
-                                        m.close();
-                                            });
+    public void stopFollower() {
+        stopSequencer(h -> !h.consensus().consensusState().isLeader());
+    }
 
-                            h.modules().getModules().forEach(m -> log.info().append("module (pre-removal): ").appendLast(m.name()));
-                            h.modules().getModules().removeIf(sequencerAppPred);
-                            h.modules().getModules().forEach(m -> log.info().append("module (post-removal): ").appendLast(m.name()));
+    private void stopSequencer(Predicate<Host> predicate) {
+        Host h = hosts.stream()
+                .filter(predicate)
+                .findFirst().get();
 
-                            h.pollables().forEach(p -> log.info().append("pollable (pre-removal): ").appendLast(p));
-                            h.pollables().removeIf(p -> p instanceof SequencerTransportWorker || p instanceof ConsensusWorker);
-                            h.pollables().forEach(p -> log.info().append("pollable (post-removal): ").appendLast(p));
-                        }
-                );
+        List<Module> modulesToClose =  h.modules()
+                .getModules()
+                .stream()
+                .filter(sequencerAppPred)
+                .collect(Collectors.toList());
+
+        Collections.reverse(modulesToClose); //close modules in order of addition.
+        modulesToClose
+                .forEach(m -> {
+                    log.info().append("closing module: ").appendLast(m.name());
+                    m.close();
+                        });
+
+        h.modules().getModules().forEach(m -> log.info().append("module (pre-removal): ").appendLast(m.name()));
+        h.modules().getModules().removeIf(sequencerAppPred);
+        h.modules().getModules().forEach(m -> log.info().append("module (post-removal): ").appendLast(m.name()));
+
+        h.pollables().forEach(p -> log.info().append("pollable (pre-removal): ").appendLast(p));
+        h.pollables().removeIf(p -> p instanceof SequencerTransportWorker || p instanceof ConsensusWorker);
+        h.pollables().forEach(p -> log.info().append("pollable (post-removal): ").appendLast(p));
     }
 
     public void startMostRecentStoppedSequencer() {

@@ -1,11 +1,13 @@
 package atomic_broadcast.client;
 
 import atomic_broadcast.utils.InstanceInfo;
+import atomic_broadcast.utils.JournalState;
 import atomic_broadcast.utils.TransportParams;
 import atomic_broadcast.utils.TransportState;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 
+import static atomic_broadcast.utils.JournalState.ActiveJournal;
 import static atomic_broadcast.utils.TransportState.*;
 
 public class ClientTransportWorker implements TransportWorker {
@@ -84,7 +86,8 @@ public class ClientTransportWorker implements TransportWorker {
     }
 
     private void findJournal() {
-        if (transportClient.findJournal()) {
+        JournalState journalState = transportClient.findJournal();
+        if (journalState == ActiveJournal) {
             setState(StartReplayMerge);
         }
     }

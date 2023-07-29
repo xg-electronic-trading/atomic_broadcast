@@ -2,10 +2,13 @@ package atomic_broadcast.sequencer;
 
 import atomic_broadcast.client.TransportWorker;
 import atomic_broadcast.utils.InstanceInfo;
+import atomic_broadcast.utils.JournalState;
 import atomic_broadcast.utils.TransportState;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 
+import static atomic_broadcast.utils.JournalState.ActiveJournal;
+import static atomic_broadcast.utils.JournalState.InactiveJournal;
 import static atomic_broadcast.utils.TransportState.*;
 
 public class FollowerTransportWorker implements TransportWorker {
@@ -69,8 +72,16 @@ public class FollowerTransportWorker implements TransportWorker {
     }
 
     private void findJournal() {
-        transportClient.findJournal();
-        setState(StartReplication);
+        JournalState journalState = transportClient.findJournal();
+
+        if (journalState == ActiveJournal) {
+            /**
+             * Active journal exists, therefore skip to replay
+             */
+            setState(StartReplay);
+        } else {
+            setState(StartReplication);
+        }
     }
 
     private void startReplication() {

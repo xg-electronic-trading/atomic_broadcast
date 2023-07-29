@@ -2,6 +2,7 @@ package atomic_broadcast.aeron;
 
 import atomic_broadcast.client.TransportClient;
 import atomic_broadcast.utils.InstanceInfo;
+import atomic_broadcast.utils.JournalState;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
@@ -13,6 +14,7 @@ import io.aeron.archive.client.ReplayMerge;
 import io.aeron.logbuffer.FragmentHandler;
 
 import static atomic_broadcast.aeron.AeronModule.*;
+import static atomic_broadcast.utils.JournalState.*;
 import static io.aeron.archive.client.RecordingSignalPoller.FRAGMENT_LIMIT;
 
 public class AeronTransportClient implements TransportClient {
@@ -53,9 +55,16 @@ public class AeronTransportClient implements TransportClient {
     }
 
     @Override
-    public boolean findJournal() {
+    public JournalState findJournal() {
+        JournalState journalState = JournalNotFound;
         latestRecording = aeronClient.findActiveRecording();
-        return latestRecording.recordingId() != Aeron.NULL_VALUE;
+        boolean journalFound = latestRecording.recordingId() != Aeron.NULL_VALUE;
+
+        if (journalFound) {
+            journalState = ActiveJournal;
+        }
+
+        return journalState;
     }
 
     @Override

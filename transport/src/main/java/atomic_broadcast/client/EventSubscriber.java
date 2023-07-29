@@ -1,10 +1,12 @@
 package atomic_broadcast.client;
 
+import atomic_broadcast.utils.JournalState;
+
 public interface EventSubscriber extends AutoCloseable {
 
     boolean connectToJournalSource();
 
-    boolean findJournal();
+    JournalState findJournal();
 
     boolean connectToEventStream();
 
