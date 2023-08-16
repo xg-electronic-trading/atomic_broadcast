@@ -1,13 +1,12 @@
 package atomic_broadcast.aeron;
 
-import atomic_broadcast.client.TransportClient;
+import atomic_broadcast.client.EventSubscriber;
 import atomic_broadcast.utils.InstanceInfo;
 import atomic_broadcast.utils.JournalState;
 import atomic_broadcast.utils.TransportParams;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import io.aeron.*;
-import io.aeron.archive.Archive;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.ArchiveException;
 import io.aeron.archive.client.ReplayMerge;
@@ -17,7 +16,7 @@ import static atomic_broadcast.aeron.AeronModule.*;
 import static atomic_broadcast.utils.JournalState.*;
 import static io.aeron.archive.client.RecordingSignalPoller.FRAGMENT_LIMIT;
 
-public class AeronTransportClient implements TransportClient {
+public class AeronTransportClient implements EventSubscriber {
 
     private static final Log log = LogFactory.getLog(AeronTransportClient.class.getName());
 

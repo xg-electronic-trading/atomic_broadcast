@@ -26,7 +26,7 @@ public class EventReaderModule implements Module {
     private boolean started;
 
 
-    public EventReaderModule(TransportClient transportClient,
+    public EventReaderModule(EventSubscriber transportClient,
                              TransportParams params,
                              MessageListener listener,
                              InstanceInfo instanceInfo) {

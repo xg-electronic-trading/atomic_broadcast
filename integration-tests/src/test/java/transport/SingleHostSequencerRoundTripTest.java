@@ -43,8 +43,6 @@ public class SingleHostSequencerRoundTripTest {
          * a command builder and assert it round trips through
          * sequencer.
          */
-        CommandPublisher cmdPublisher = fixture.cmdPublisher();
-        CommandProcessor cmdProcessor = new CommandProcessorImpl(cmdPublisher, new NoOpCommandValidator(), new InstanceInfo(AlgoContainer, "localhost", 1));
         CommandBuilder cmdBuilder = new CommandBuilderImpl();
         NewOrderSingleCommandImpl nos = cmdBuilder.createNewOrderSingle();
         long id = 1;
@@ -62,8 +60,8 @@ public class SingleHostSequencerRoundTripTest {
                 .startTime(1_000)
                 .endTime(1_001);
 
-        Action action = cmdProcessor.send(nos);
-        Assertions.assertEquals(CommandSent, action);
+        boolean sent = fixture.sendCommand(nos);
+        Assertions.assertTrue(sent);
         fixture.pollUntilCommandAcked(id);
     }
 

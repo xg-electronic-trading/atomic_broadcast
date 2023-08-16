@@ -6,7 +6,7 @@ import java.util.List;
 
 import static atomic_broadcast.utils.ModuleName.Composite;
 
-public class CompositeModule implements Module {
+public class CompositeModule implements Module, ModuleBuilder {
 
     private boolean started = false;
 

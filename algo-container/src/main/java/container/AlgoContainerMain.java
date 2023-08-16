@@ -77,7 +77,7 @@ public class AlgoContainerMain {
          * 4. set up event reader
          */
         AeronClient aeronClient = new AeronClient(params, instanceInfo);
-        TransportClient transportClient = new AeronTransportClient(aeronClient, clientParams, instanceInfo);
+        EventSubscriber transportClient = new AeronTransportClient(aeronClient, clientParams, instanceInfo);
 
         /**
          * 5. set up aeron publisher client

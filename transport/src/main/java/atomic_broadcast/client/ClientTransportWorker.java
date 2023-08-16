@@ -16,11 +16,11 @@ public class ClientTransportWorker implements TransportWorker {
 
     private final InstanceInfo instanceInfo;
     private final TransportParams params;
-    private final TransportClient transportClient;
+    private final EventSubscriber transportClient;
     private TransportState state = NoState;
 
     public ClientTransportWorker(TransportParams params,
-                                 TransportClient transportClient,
+                                 EventSubscriber transportClient,
                                  InstanceInfo instanceInfo) {
         this.params = params;
         this.transportClient = transportClient;

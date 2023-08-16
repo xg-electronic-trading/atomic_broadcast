@@ -8,6 +8,7 @@ import atomic_broadcast.consensus.ConsensusWorker;
 import atomic_broadcast.sequencer.SequencerTransportWorker;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
+import command.Command;
 import host.Host;
 import atomic_broadcast.sequencer.SequencerModule;
 import atomic_broadcast.utils.*;
@@ -23,6 +24,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static atomic_broadcast.consensus.ClusterTransportState.Leader;
+import static atomic_broadcast.utils.Action.CommandSent;
 import static atomic_broadcast.utils.ShmFileConstants.SEQ_NUM_FILE_PREFIX;
 import static atomic_broadcast.utils.ShmFileConstants.SHM_SUFFIX;
 import static atomic_broadcast.utils.TransportState.*;
@@ -58,7 +60,7 @@ public class SequencerTestFixture {
                         TestTransportParams.createConsensusParams()
                                 .instance(instance)
                                 .electionTimeoutSecs(ElectionTimeoutSecs + instance)) // stagger election timeouts.
-                .deployClient(clientParams, new EventPrinter());
+                .deploySampleClient(clientParams);
 
             hosts.add(host);
         }
@@ -174,19 +176,6 @@ public class SequencerTestFixture {
 
     public Predicate<Module> eventReaders = m -> m instanceof EventReaderModule;
 
-    public CommandPublisher cmdPublisher() {
-        Optional<Host> hostOpt = hosts.stream().filter(h -> h.hostNum() == 1).findFirst();
-        if (hostOpt.isPresent()) {
-            return hostOpt.get().publisher().cmdPublisher();
-        } else {
-            throw new IllegalArgumentException("host-0 not found");
-        }
-    }
-
-    public CommandPublisher cmdPublisher(Host host) {
-        return host.publisher().cmdPublisher();
-    }
-
     private Module findModule(ModuleName name, List<Module> modules) {
         Optional<Module> modOpt = modules
                 .stream()
@@ -297,6 +286,17 @@ public class SequencerTestFixture {
     }
 
     private final Predicate<Module> sequencerAppPred = m -> m.instanceInfo().app() == App.Sequencer;
+
+
+    public boolean sendCommand(Command cmd) {
+        Optional<Host> hostOpt = hosts.stream().findFirst();
+        if (hostOpt.isPresent()) {
+            Action action = hostOpt.get().sampleClient().cmdProcessor().send(cmd);
+            return action == CommandSent;
+        } else {
+            return false;
+        }
+    }
 
     @AfterEach
     public void after() {

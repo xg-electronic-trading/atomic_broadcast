@@ -5,7 +5,8 @@ public enum App implements CodedEnum {
     AlgoContainer(1),
     MarketGateway(2),
     FixGateway(3),
-    MediaDriver(4);
+    MediaDriver(4),
+    SampleClient(5);
 
     private final int code;
 

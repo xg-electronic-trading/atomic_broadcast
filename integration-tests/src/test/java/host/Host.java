@@ -3,21 +3,19 @@ package host;
 import atomic_broadcast.aeron.*;
 import atomic_broadcast.client.*;
 import atomic_broadcast.consensus.*;
-import atomic_broadcast.listener.MessageListener;
+import atomic_broadcast.sample.SampleClient;
 import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.sequencer.SequencerModule;
+import atomic_broadcast.transport.TransportFactory;
 import atomic_broadcast.utils.*;
 import atomic_broadcast.utils.Module;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
-import container.AlgoContainer;
+import listener.EventPrinter;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectHashMap;
-import subscriptions.MarketDataService;
 import time.Clock;
 import time.RealClock;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -30,13 +28,12 @@ public class Host {
 
     private int hostNum;
     private CompositeModule modules;
-    private List<Pollable> pollables;
+    private CompositePollable pollables;
     private final Long2ObjectHashMap<ClusterMember> clusterMembers;
     private AeronModule mediaDriver;
     private SequencerModule sequencer;
     private ConsensusModule consensus;
-    private EventReaderModule eventbus;
-    private ClientPublisherModule publisher;
+    private atomic_broadcast.sample.SampleClient client;
     private final AeronParams params;
     private final Clock clock;
 
@@ -45,7 +42,7 @@ public class Host {
         log.info().append("using aeron dir: ").appendLast(aeronDir);
 
         this.hostNum = hostNum;
-        this.pollables = new ArrayList<>(20);
+        this.pollables = new CompositePollable();
         this.clusterMembers = new Long2ObjectHashMap<>(20, 0.65f, true);
         this.clusterMembers.put(1, new ClusterMember(Sequencer, "localhost", ARCHIVE_REQUEST_PORT_RANGE_START + 1, 1));
         this.clusterMembers.put(2, new ClusterMember(Sequencer, "localhost", ARCHIVE_REQUEST_PORT_RANGE_START + 2, 2));
@@ -154,31 +151,27 @@ public class Host {
         return this;
     }
 
-    public Host deployClient(TransportParams transportParams, MessageListener listener) {
-        InstanceInfo instanceInfo = new InstanceInfo(AlgoContainer, "localhost", transportParams.instanceId());
-        AeronClient aeronClient = new AeronClient(params, instanceInfo);
-        TransportClient transportClient = new AeronTransportClient(aeronClient, transportParams, instanceInfo);
-        CommandPublisher cmdPublisher = new AeronPublisherClient(aeronClient, transportParams.publicationChannel(), COMMAND_STREAM_ID);
-        eventbus = new EventReaderModule(transportClient, transportParams, listener, instanceInfo);
-        publisher = new ClientPublisherModule(cmdPublisher, transportParams, instanceInfo);
-        CommandProcessor cmdProcessor = new CommandProcessorImpl(cmdPublisher, new NoOpCommandValidator(), instanceInfo);
+    public Host deployClient(Module client) {
+        modules.add(client);
+        return this;
+    }
 
-        MarketDataService mdService = new MarketDataService();
+    public Host deploySampleClient(TransportParams transportParams) {
+        InstanceInfo instanceInfo = new InstanceInfo(SampleClient, "localhost", transportParams.instanceId());
+        TransportFactory transportFactory = new AeronTransportFactory(
+                instanceInfo,
+                transportParams,
+                params,
+                modules);
 
-        if (eventbus.eventReaderType() != EventReaderType.Direct) {
-            pollables.add(eventbus.transport());
-        }
+        client = new SampleClient(
+                instanceInfo,
+                transportParams,
+                transportFactory,
+                new EventPrinter(),
+                modules,
+                pollables);
 
-        Pollable algoContainer = new AlgoContainer(
-                publisher.transport(),
-                eventbus.eventsReader(),
-                mdService
-                );
-
-        pollables.add(algoContainer);
-        modules.add(aeronClient);
-        modules.add(eventbus);
-        modules.add(publisher);
         return this;
     }
 
@@ -195,7 +188,7 @@ public class Host {
     }
 
     public List<Pollable> pollables() {
-        return pollables;
+        return pollables.getPollables();
     }
 
     public void close() {
@@ -210,11 +203,9 @@ public class Host {
         return consensus;
     }
 
-    public EventReaderModule eventbus() {
-        return eventbus;
+    public atomic_broadcast.sample.SampleClient sampleClient() {
+        return client;
     }
-
-    public ClientPublisherModule publisher() { return publisher; }
 
     public int hostNum() { return hostNum; }
 
