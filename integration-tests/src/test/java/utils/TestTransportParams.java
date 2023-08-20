@@ -1,6 +1,6 @@
 package utils;
 
-import atomic_broadcast.consensus.ConsensusEventListener;
+import atomic_broadcast.listener.SequencerEventPrinter;
 import atomic_broadcast.sequencer.SequencerCommandHandler;
 import atomic_broadcast.utils.ConnectAs;
 import atomic_broadcast.utils.ConnectUsing;
@@ -8,7 +8,6 @@ import atomic_broadcast.utils.EventReaderType;
 import atomic_broadcast.utils.TransportParams;
 import io.aeron.ChannelUriStringBuilder;
 import io.aeron.CommonContext;
-import listener.EventPrinter;
 
 import static atomic_broadcast.aeron.AeronModule.COMMAND_ENDPOINT;
 
@@ -19,6 +18,7 @@ public class TestTransportParams {
                 .connectAs(ConnectAs.Sequencer)
                 .connectUsing(ConnectUsing.Unicast)
                 .addListener(new SequencerCommandHandler())
+                .addListener(new SequencerEventPrinter())
                 .instance(1);
     }
 

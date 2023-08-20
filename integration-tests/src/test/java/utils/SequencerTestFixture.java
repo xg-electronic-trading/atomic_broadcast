@@ -99,6 +99,18 @@ public class SequencerTestFixture {
         pollUntil(allPollables, () -> allModules.stream().anyMatch(predicate));
     }
 
+    public void pollUntilCommandIdAcked(Predicate<Module> moduleFilter, long id) {
+        List<Pollable> allPollables = hosts.stream()
+                .flatMap(hosts -> hosts.pollables().stream())
+                .collect(Collectors.toList());
+
+        List<Module> allModules = hosts.stream()
+                .flatMap(host -> host.moduleList().stream())
+                .collect(Collectors.toList());
+
+        pollUntil(allPollables, () -> allModules.stream().filter(moduleFilter).allMatch(m -> commandAcked(m, id)));
+    }
+
     public void pollUntilAll(Predicate<Module> moduleFilter, Predicate<Module> predicate) {
         List<Pollable> allPollables = hosts.stream()
                 .flatMap(hosts -> hosts.pollables().stream())
@@ -174,6 +186,19 @@ public class SequencerTestFixture {
         return false;
     };
 
+    public boolean commandAcked(Module m, long id) {
+        if (m instanceof EventReaderModule) {
+            EventReaderModule eventReaderModule = (EventReaderModule) m;
+            if (eventReaderModule.listener() instanceof EventPrinter) {
+                EventPrinter eventPrinter = (EventPrinter) eventReaderModule.listener();
+                return eventPrinter.isCommandAcked(id);
+            } else {
+                fail("Cannot find EventPrinter MessageListener");
+            }
+        }
+        return false;
+    }
+
     public Predicate<Module> eventReaders = m -> m instanceof EventReaderModule;
 
     private Module findModule(ModuleName name, List<Module> modules) {
@@ -205,25 +230,6 @@ public class SequencerTestFixture {
         if (module instanceof EventReaderModule) {
             EventReaderModule eventBus = (EventReaderModule) module;
             pollUntil(host.pollables(), expected, eventBus::state);
-        }
-    }
-
-    public void pollUntilCommandAcked(long id) {
-        hosts.forEach(h -> {
-            pollUntilCommandAcked(id, h);
-        });
-    }
-
-    public void pollUntilCommandAcked(long id, Host host) {
-        Module module = findModule(ModuleName.ClientTransport, host);
-        if (module instanceof EventReaderModule) {
-            EventReaderModule eventBus = (EventReaderModule) module;
-            if (eventBus.listener() instanceof EventPrinter) {
-                EventPrinter eventPrinter = (EventPrinter) eventBus.listener();
-                pollUntil(host.pollables(), () -> eventPrinter.isCommandAcked(id));
-            } else {
-                fail("Cannot find EventPrinter MessageListener");
-            }
         }
     }
 

@@ -62,7 +62,7 @@ public class SingleHostSequencerRoundTripTest {
 
         boolean sent = fixture.sendCommand(nos);
         Assertions.assertTrue(sent);
-        fixture.pollUntilCommandAcked(id);
+        fixture.pollUntilCommandIdAcked(fixture.eventReaders, id);
     }
 
     @AfterEach

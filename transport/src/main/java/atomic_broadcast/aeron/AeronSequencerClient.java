@@ -1,8 +1,9 @@
 package atomic_broadcast.aeron;
 
-import atomic_broadcast.consensus.ClientSeqNumWriter;
 import atomic_broadcast.consensus.ClusterMember;
 import atomic_broadcast.consensus.ConsensusStateHolder;
+import atomic_broadcast.consensus.ConsensusStateSnapshot;
+import atomic_broadcast.consensus.SeqNoClient;
 import atomic_broadcast.sequencer.SequencerClient;
 import atomic_broadcast.utils.InstanceInfo;
 import atomic_broadcast.utils.JournalState;
@@ -33,6 +34,7 @@ public class AeronSequencerClient implements SequencerClient {
 
     private final InstanceInfo instanceInfo;
     private final Clock clock;
+    private final SeqNoClient seqNoClient;
     private final AeronClient aeronClient;
     private final TransportParams params;
     private final ConsensusStateHolder consensusState;
@@ -71,7 +73,7 @@ public class AeronSequencerClient implements SequencerClient {
                                 AeronClient aeronClient,
                                 TransportParams params,
                                 ConsensusStateHolder consensusState,
-                                ClientSeqNumWriter seqNumWriter,
+                                SeqNoClient seqNoClient,
                                 Long2ObjectHashMap<ClusterMember> clusterMembers,
                                 Clock clock
                                 ) {
@@ -79,9 +81,10 @@ public class AeronSequencerClient implements SequencerClient {
         this.aeronClient = aeronClient;
         this.params = params;
         this.consensusState = consensusState;
-        this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(this, params.listeners(), seqNumWriter, params.instanceId()));
+        this.fragmentHandler = new FragmentAssembler(new AeronSequencerFragmentHandler(instanceInfo, this, params.listeners(), seqNoClient, params.instanceId()));
         this.clusterMembers = clusterMembers;
         this.clock = clock;
+        this.seqNoClient = seqNoClient;
         createEventStreamPublicationChannel();
         createEventStreamExtendPublicationChannel();
     }
@@ -238,11 +241,26 @@ public class AeronSequencerClient implements SequencerClient {
 
             if (null != image) {
                 isDone = image.position() >= latestRecording.stopPosition();
+                position = image.position();
             }
         }
 
         if (isDone) {
-            aeronClient.closeReplay();
+            /**
+             * the replay added is on a dyanamic port and is closed automatically.
+             * However clear replay session id so it is not used again.
+             */
+            aeronClient.clearReplaySessionId();
+
+
+            ConsensusStateSnapshot consensusStateSnapshot = seqNoClient.readSeqNum();
+            if (position != consensusStateSnapshot.logPosition()) {
+                throw new IllegalStateException("publication position: " + position +
+                        " not equal to logPosition: " + consensusStateSnapshot.logPosition() +
+                        " after sequencer replay."
+                );
+            }
+
         }
 
         return isDone;
@@ -469,5 +487,6 @@ public class AeronSequencerClient implements SequencerClient {
         subscription = null;
         publication = null;
         addPublicationDelay = Aeron.NULL_VALUE;
+        position = -1;
     }
 }

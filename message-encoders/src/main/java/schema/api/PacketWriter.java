@@ -13,7 +13,7 @@ public class PacketWriter extends PacketImpl {
         headerEncoder.templateId(messageFlyweight.sbeTemplateId());
         headerEncoder.schemaId(messageFlyweight.sbeSchemaId());
         headerEncoder.version(messageFlyweight.sbeSchemaVersion());
-        headerEncoder.seqNo(0);
+        headerEncoder.seqNo(-1);
         headerEncoder.isReplay((short) 0);
         return headerEncoder.encodedLength();
     }

@@ -25,6 +25,7 @@ public class SequencerTransportWorker implements TransportWorker {
 
     private TransportState state = NoState;
     private TransportState innerWorkerState = NoState;
+    private boolean shouldPoll = false;
 
     public SequencerTransportWorker(
             TransportParams params,
@@ -44,6 +45,7 @@ public class SequencerTransportWorker implements TransportWorker {
         setState(FindLeader);
         leaderWorker.start();
         followerWorker.start();
+        shouldPoll = true;
     }
 
     @Override
@@ -54,6 +56,7 @@ public class SequencerTransportWorker implements TransportWorker {
             followerWorker.close();
             setState(Stopped);
             innerWorkerState = Stopped;
+            shouldPoll = false;
         } catch (Exception e){
             log.error().append("error whilst closing: ").appendLast(e);
         }
@@ -62,22 +65,24 @@ public class SequencerTransportWorker implements TransportWorker {
     @Override
     public void poll() {
         try {
-            switch (state) {
-                case NoState:
-                case Stopped:
-                    break;
-                case FindLeader:
-                    determineLeader();
-                    break;
-                case ConnectToJournalSource:
-                    connectToJournalSource();
-                    break;
-                case PollLeader:
-                    pollLeader();
-                    break;
-                case PollFollower:
-                    pollFollower();
-                    break;
+            if (shouldPoll) {
+                switch (state) {
+                    case NoState:
+                    case Stopped:
+                        break;
+                    case FindLeader:
+                        determineLeader();
+                        break;
+                    case ConnectToJournalSource:
+                        connectToJournalSource();
+                        break;
+                    case PollLeader:
+                        pollLeader();
+                        break;
+                    case PollFollower:
+                        pollFollower();
+                        break;
+                }
             }
         } catch (Exception e) {
             if (!lastExceptionMessage.equals(e.getMessage())) {
@@ -87,6 +92,7 @@ public class SequencerTransportWorker implements TransportWorker {
                         .append(", exception ").appendLast(e.getMessage());
 
                 lastExceptionMessage = e.getMessage();
+                shouldPoll = false;
             }
         }
     }
