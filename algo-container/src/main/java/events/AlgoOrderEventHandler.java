@@ -1,7 +1,10 @@
 package events;
 
+import algo.AlgoAction;
 import algo.AlgoCode;
 import algo.AlgoContext;
+import algo.AlgoFactory;
+import immutable.ImmutableList;
 import orderstate.ByteBufferOrderStateCache;
 import orderstate.OrderStateFlyweight;
 import org.agrona.collections.Long2ObjectHashMap;
@@ -9,16 +12,21 @@ import schema.api.NewOrderSingle;
 import schema.api.OrderCancelReplaceRequest;
 import schema.api.OrderCancelRequest;
 
+import java.util.List;
+
 public class AlgoOrderEventHandler implements OrderEventHandler {
 
     private final ByteBufferOrderStateCache osCache;
     private final AlgoContext algoContext;
-    private final Long2ObjectHashMap<AlgoCode> strategies = new Long2ObjectHashMap<>(20, 0.65f, true);
+    private final AlgoFactory algoFactory;
+    private final Long2ObjectHashMap<AlgoCode> algoInstanceMap = new Long2ObjectHashMap<>(5_000, 0.65f, true);
 
     public AlgoOrderEventHandler(ByteBufferOrderStateCache osCache,
-                                 AlgoContext algoContext) {
+                                 AlgoContext algoContext,
+                                 AlgoFactory algoFactory) {
         this.osCache = osCache;
         this.algoContext = algoContext;
+        this.algoFactory = algoFactory;
 
     }
 
@@ -47,8 +55,13 @@ public class AlgoOrderEventHandler implements OrderEventHandler {
         flyweight.setPrice(newOrder.price());
         flyweight.setQuantity(newOrder.qty());
 
-        //algo code should be instantiated on pending new per strategy type
-        //algoCode.onPendingNew(newOrder, flyweight, algoContext);
+        /**
+         * create algo instance per parent order.
+         * algo code should be created by a factory that is owned by
+         * strategy repo/module
+         */
+        AlgoCode algoCode = algoFactory.createAlgo(newOrder.strategy());
+        ImmutableList<AlgoAction> actions = algoCode.onPendingNew(newOrder, flyweight, algoContext);
     }
 
     @Override

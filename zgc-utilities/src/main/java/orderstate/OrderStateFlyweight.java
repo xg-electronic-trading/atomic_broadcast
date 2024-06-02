@@ -40,6 +40,7 @@ public class OrderStateFlyweight implements OrderState, OrderStateSetter {
                     break;
                 case MsgSeqNum:
                     msgSeqNumOffset = objectOffset;
+                    break;
                 default:
                     throw new IllegalArgumentException("field " + field + " not recognised and unable to be added to orderstate cache.");
 

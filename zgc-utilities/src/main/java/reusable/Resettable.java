@@ -1,4 +1,4 @@
-package atomic_broadcast.utils;
+package reusable;
 
 public interface Resettable {
 

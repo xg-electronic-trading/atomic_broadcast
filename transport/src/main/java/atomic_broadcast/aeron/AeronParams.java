@@ -1,6 +1,6 @@
 package atomic_broadcast.aeron;
 
-import atomic_broadcast.utils.Resettable;
+import reusable.Resettable;
 import time.Clock;
 
 public class AeronParams implements Resettable {

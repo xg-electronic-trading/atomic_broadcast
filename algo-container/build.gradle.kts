@@ -20,6 +20,8 @@ dependencies {
 
     // Use JUnit Jupiter for testing.
     testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.6.0")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
     // library dependencies
     implementation("com.google.guava:guava:30.1.1-jre")

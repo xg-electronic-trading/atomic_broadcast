@@ -1,6 +1,7 @@
 package atomic_broadcast.utils;
 
 import atomic_broadcast.listener.MessageListener;
+import reusable.Resettable;
 
 import java.util.ArrayList;
 import java.util.List;

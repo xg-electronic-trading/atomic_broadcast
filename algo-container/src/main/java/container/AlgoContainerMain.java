@@ -1,9 +1,6 @@
 package container;
 
-import algo.AlgoCode;
-import algo.AlgoCodeImpl;
-import algo.AlgoContext;
-import algo.AlgoContextImpl;
+import algo.*;
 import atomic_broadcast.aeron.AeronClient;
 import atomic_broadcast.aeron.AeronParams;
 import atomic_broadcast.aeron.AeronPublisherClient;
@@ -36,17 +33,7 @@ public class AlgoContainerMain {
 
     private static final Log log = LogFactory.getLog(AlgoContainerMain.class.getName());
 
-    public static void main(String[] args) {
-        try {
-            start(new AlgoCodeImpl());
-        } catch (Exception e) {
-            log.error().append("error in AlgoContainerMain: ").appendLast(e);
-        }
-    }
-
-
-
-    public static void start(AlgoCode algoCode) {
+    public static void start(AlgoFactory algoFactory) {
         InstanceInfo instanceInfo = new InstanceInfo(AlgoContainer, "localhost", 1);
         AtomicBoolean isReady = new AtomicBoolean();
         String aeronDir = IoUtil.tmpDirName()+"/"+"aeron";
@@ -97,7 +84,7 @@ public class AlgoContainerMain {
 
         ByteBufferOrderStateCache cache = new ByteBufferOrderStateCache(false, 1, fields);
         AlgoContext ctx = new AlgoContextImpl(cmdProcessor, cmdBuilder);
-        OrderEventHandler eventHandler = new AlgoOrderEventHandler(cache, ctx);
+        OrderEventHandler eventHandler = new AlgoOrderEventHandler(cache, ctx, algoFactory);
         MessageListener eventListener = new AlgoEventListener(eventHandler);
 
         EventReaderModule eventbus = new EventReaderModule(transportClient, clientParams, eventListener, instanceInfo);

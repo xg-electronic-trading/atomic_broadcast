@@ -23,7 +23,8 @@ public class AlgoModule implements Module {
 
     public AlgoModule(InstanceInfo instanceInfo,
                       CommandProcessor cmdProcessor,
-                      CommandBuilder cmdBuilder) {
+                      CommandBuilder cmdBuilder,
+                      AlgoFactory algoFactory) {
         this.instanceInfo = instanceInfo;
         OrderStateField[] fields = new OrderStateField[]{
                 OrderStateField.Id,
@@ -32,7 +33,7 @@ public class AlgoModule implements Module {
                 OrderStateField.MsgSeqNum};
         ByteBufferOrderStateCache cache = new ByteBufferOrderStateCache(false, 1, fields);
         AlgoContext ctx = new AlgoContextImpl(cmdProcessor, cmdBuilder);
-        OrderEventHandler eventHandler = new AlgoOrderEventHandler(cache, ctx);
+        OrderEventHandler eventHandler = new AlgoOrderEventHandler(cache, ctx, algoFactory);
         this.eventListener = new AlgoEventListener(eventHandler);
     }
 

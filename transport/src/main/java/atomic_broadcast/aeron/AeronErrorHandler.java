@@ -1,6 +1,6 @@
 package atomic_broadcast.aeron;
 
-import atomic_broadcast.utils.Resettable;
+import reusable.Resettable;
 import com.epam.deltix.gflog.api.Log;
 import com.epam.deltix.gflog.api.LogFactory;
 import org.agrona.ErrorHandler;

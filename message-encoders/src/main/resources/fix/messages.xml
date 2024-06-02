@@ -131,6 +131,7 @@
             <validValue name="CLOSE">4</validValue>
             <validValue name="LIQSEEK">5</validValue>
             <validValue name="SPREADER">6</validValue>
+            <validValue name="SDMA">7</validValue>
         </enum>
     </types>
 
